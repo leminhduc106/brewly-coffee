@@ -25,6 +25,7 @@ import { isTodayUserBirthday, getNextBirthdayDays, updateUserProfile } from '@/l
 import { useToast } from '@/hooks/use-toast';
 import { FeedbackForm } from '@/components/feedback-form';
 import { submitOrderFeedback } from '@/lib/feedback-service';
+import { StoreHours } from '@/components/store-hours';
 
 export default function Home() {
   const { userProfile, refreshUserProfile } = useAuth();
@@ -147,6 +148,7 @@ export default function Home() {
         </div>
       )}
 
+
       {/* Featured Products */}
       <section id="menu" className="py-20 md:py-28">
         <div className="container mx-auto px-4 md:px-6">
@@ -160,6 +162,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Store Hours & Holiday Notices */}
+      <StoreHours />
 
       {/* Promo Banner Carousel */}
       <section className="py-20 md:py-28 bg-accent text-accent-foreground">

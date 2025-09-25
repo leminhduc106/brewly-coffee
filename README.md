@@ -126,12 +126,12 @@ A modern, feature-rich coffee shop web app built with Next.js, TypeScript, Tailw
 - [x] Birthday Rewards
 - [ ] Push Notifications (Web)
 - [ ] Store Announcements/Promos
-- [ ] Feedback/Rating System
+- [x] Feedback/Rating System
 - [ ] Accessibility Features
 - [ ] QR Code Loyalty
 - [ ] Multi-language Support
 - [ ] Order Repeat/Quick Reorder
-- [ ] Store Hours & Holiday Notices
+- [x] Store Hours & Holiday Notices
 - [ ] Contactless Pickup Instructions
 - [ ] Guest Checkout
 

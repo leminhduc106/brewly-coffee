@@ -21,6 +21,13 @@ export interface Store {
   lat: number;
   lng: number;
   openingHours: string;
+  holidayNotices?: HolidayNotice[];
+}
+
+export interface HolidayNotice {
+  date: string; // ISO date string
+  message: string;
+  isClosed?: boolean;
 }
 
 export interface CartItem extends Product {

@@ -115,6 +115,18 @@ export const stores: Store[] = [
     lat: 34.0522,
     lng: -118.2437,
     openingHours: '7am - 7pm',
+    holidayNotices: [
+      {
+        date: '2025-12-25',
+        message: 'Closed for Christmas Day',
+        isClosed: true,
+      },
+      {
+        date: '2025-01-01',
+        message: 'Open 9am - 3pm for New Year’s Day',
+        isClosed: false,
+      },
+    ],
   },
   {
     id: '2',
@@ -123,6 +135,18 @@ export const stores: Store[] = [
     lat: 34.0622,
     lng: -118.2537,
     openingHours: '6am - 9pm',
+    holidayNotices: [
+      {
+        date: '2025-12-25',
+        message: 'Closed for Christmas Day',
+        isClosed: true,
+      },
+      {
+        date: '2025-01-01',
+        message: 'Open 8am - 2pm for New Year’s Day',
+        isClosed: false,
+      },
+    ],
   },
 ];
 
