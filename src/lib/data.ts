@@ -161,6 +161,15 @@ export const pastOrders: Order[] = [
     total: 31.0,
     paymentMethod: 'points',
     createdAt: '2023-10-15T09:15:00Z',
-    status: 'completed',
+    status: 'preparing',
+  },
+  {
+    id: 'order004',
+    userId: 'user123',
+    items: [],
+    total: 8.50,
+    paymentMethod: 'cash',
+    createdAt: '2023-10-28T16:45:00Z',
+    status: 'ready',
   },
 ];

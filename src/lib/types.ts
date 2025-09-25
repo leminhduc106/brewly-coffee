@@ -37,7 +37,7 @@ export interface Order {
   total: number;
   paymentMethod: 'cash' | 'qr' | 'points';
   createdAt: string;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled';
 }
 
 export interface User {
@@ -47,4 +47,7 @@ export interface User {
   avatar: string;
   loyaltyPoints: number;
   tier: 'Silver' | 'Gold' | 'Platinum';
+  referralCode?: string;
+  referredBy?: string;
+  birthday?: string; // ISO string format (YYYY-MM-DD)
 }

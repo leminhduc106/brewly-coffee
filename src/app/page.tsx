@@ -1,5 +1,6 @@
 
 'use client';
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -14,11 +15,78 @@ import {
 import { featuredProducts, stores, pastOrders, sampleUser } from '@/lib/data';
 import { ProductCard } from '@/components/product-card';
 import { LoyaltyPointsCalculator } from '@/components/loyalty-points-calculator';
+import { Recommendations } from '@/components/recommendations';
+import { ReferralSystem } from '@/components/referral-system';
+import { BirthdayBanner } from '@/components/birthday-banner';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, MapPin, Gift, Clock } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { useAuth } from '@/context/auth-context';
+import { isTodayUserBirthday, getNextBirthdayDays, updateUserProfile } from '@/lib/user-service';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Home() {
+  const { userProfile, refreshUserProfile } = useAuth();
+  const { toast } = useToast();
+
+  // Get user favorites for personalized recommendations
+  const [favorites, setFavorites] = React.useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      return JSON.parse(localStorage.getItem('favorites') || '[]');
+    }
+    return [];
+  });
+
+  const [birthdayRewardClaimed, setBirthdayRewardClaimed] = React.useState(false);
+
+  // Check if birthday reward is already claimed today
+  React.useEffect(() => {
+    if (userProfile && isTodayUserBirthday(userProfile.birthday)) {
+      const claimedToday = localStorage.getItem(`birthday-claimed-${userProfile.uid}-${new Date().toDateString()}`);
+      setBirthdayRewardClaimed(!!claimedToday);
+    }
+  }, [userProfile]);
+
+  const handleClaimBirthdayReward = async () => {
+    if (!userProfile) return;
+
+    try {
+      // Give 100 bonus points
+      const newPoints = userProfile.loyaltyPoints + 100;
+      await updateUserProfile(userProfile.uid, { loyaltyPoints: newPoints });
+      
+      // Mark as claimed for today
+      localStorage.setItem(`birthday-claimed-${userProfile.uid}-${new Date().toDateString()}`, 'true');
+      setBirthdayRewardClaimed(true);
+      
+      // Refresh user profile to get updated points
+      await refreshUserProfile();
+      
+      toast({
+        title: "🎉 Birthday Reward Claimed!",
+        description: "100 loyalty points have been added to your account! Your free pastry is ready to redeem.",
+        duration: 5000,
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: "Error claiming reward",
+        description: "Please try again later.",
+      });
+    }
+  };
+
+  React.useEffect(() => {
+    const handleStorageChange = () => {
+      if (typeof window !== 'undefined') {
+        setFavorites(JSON.parse(localStorage.getItem('favorites') || '[]'));
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const handleScrollTo = (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     const element = document.getElementById(id);
@@ -26,6 +94,9 @@ export default function Home() {
       element.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
+  const isBirthday = userProfile && isTodayUserBirthday(userProfile.birthday);
+  const nextBirthdayDays = userProfile ? getNextBirthdayDays(userProfile.birthday) : undefined;
 
   return (
     <div className="flex flex-col bg-background">
@@ -62,6 +133,18 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Birthday Banner */}
+      {userProfile && (isBirthday || (nextBirthdayDays !== undefined && nextBirthdayDays <= 3)) && (
+        <div className="container mx-auto px-4 md:px-6 py-6">
+          <BirthdayBanner
+            userName={userProfile.name}
+            onClaimReward={handleClaimBirthdayReward}
+            isRewardClaimed={birthdayRewardClaimed}
+            nextBirthdayDays={nextBirthdayDays}
+          />
+        </div>
+      )}
 
       {/* Featured Products */}
       <section id="menu" className="py-20 md:py-28">
@@ -148,7 +231,7 @@ export default function Home() {
               <CardHeader className="flex flex-row items-center justify-between bg-muted/30 p-6">
                 <div className="flex items-center gap-4">
                   <Image
-                    src={sampleUser.avatar}
+                    src={userProfile?.avatar || sampleUser.avatar}
                     alt="User avatar"
                     width={64}
                     height={64}
@@ -156,10 +239,10 @@ export default function Home() {
                   />
                   <div>
                     <CardTitle className="font-body text-2xl font-bold">
-                      {sampleUser.name}
+                      {userProfile?.name || sampleUser.name}
                     </CardTitle>
                     <p className="text-base text-muted-foreground">
-                      {sampleUser.email}
+                      {userProfile?.email || sampleUser.email}
                     </p>
                   </div>
                 </div>
@@ -167,7 +250,7 @@ export default function Home() {
                   variant="default"
                   className="text-lg shadow-lg bg-amber-500 hover:bg-amber-500/90 text-white"
                 >
-                  {sampleUser.tier}
+                  {userProfile?.tier || sampleUser.tier}
                 </Badge>
               </CardHeader>
               <CardContent className="p-8 grid gap-8">
@@ -175,15 +258,15 @@ export default function Home() {
                   <div className="flex justify-between items-end mb-2">
                     <p className="text-base font-medium">Your Points</p>
                     <p className="font-bold text-primary text-xl">
-                      {sampleUser.loyaltyPoints.toLocaleString()} / 2,000
+                      {(userProfile?.loyaltyPoints || sampleUser.loyaltyPoints).toLocaleString()} / 2,000
                     </p>
                   </div>
                   <Progress
-                    value={(sampleUser.loyaltyPoints / 2000) * 100}
+                    value={((userProfile?.loyaltyPoints || sampleUser.loyaltyPoints) / 2000) * 100}
                     className="h-4"
                   />
                   <p className="text-sm text-muted-foreground mt-2">
-                    {2000 - sampleUser.loyaltyPoints} points to Platinum Tier
+                    {2000 - (userProfile?.loyaltyPoints || sampleUser.loyaltyPoints)} points to Platinum Tier
                   </p>
                 </div>
               </CardContent>
@@ -215,11 +298,19 @@ export default function Home() {
                         variant={
                           order.status === 'completed'
                             ? 'default'
+                            : order.status === 'preparing'
+                            ? 'secondary'
+                            : order.status === 'ready'
+                            ? 'outline'
                             : 'secondary'
                         }
                         className={
                           order.status === 'completed'
                             ? 'bg-green-600 hover:bg-green-600/90 text-white mt-1'
+                            : order.status === 'preparing'
+                            ? 'bg-yellow-600 hover:bg-yellow-600/90 text-white mt-1'
+                            : order.status === 'ready'
+                            ? 'bg-blue-600 hover:bg-blue-600/90 text-white mt-1'
                             : 'mt-1'
                         }
                       >
@@ -230,6 +321,16 @@ export default function Home() {
                 )) : <p className="text-muted-foreground text-center p-8">No past orders found.</p>}
               </CardContent>
             </Card>
+          </section>
+
+          {/* Referral Program Section */}
+          <section id="referral">
+            <h2 className="font-headline text-5xl mb-12 text-primary">Refer Friends</h2>
+            <ReferralSystem 
+              userReferralCode={userProfile?.referralCode || "BREW123"}
+              totalReferrals={5} 
+              earnedPoints={250} 
+            />
           </section>
         </div>
 
@@ -274,6 +375,9 @@ export default function Home() {
           </section>
         </aside>
       </div>
+
+      {/* Personalized Recommendations */}
+      <Recommendations userFavorites={favorites} maxRecommendations={4} />
     </div>
   );
 }

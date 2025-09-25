@@ -10,17 +10,21 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
-  User 
+  User as FirebaseUser
 } from "firebase/auth";
 import { app } from '@/lib/firebase';
+import { getUserProfile, createUserProfile } from '@/lib/user-service';
+import { User } from '@/lib/types';
 
 interface AuthContextType {
-  user: User | null;
+  user: FirebaseUser | null;
+  userProfile: User | null;
   loading: boolean;
   signUp: (email: string, pass: string) => Promise<any>;
   signIn: (email: string, pass: string) => Promise<any>;
   signInWithGoogle: () => Promise<any>;
   signOutUser: () => Promise<void>;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,15 +38,44 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const auth = getAuth(app);
 
+  const refreshUserProfile = async () => {
+    if (user) {
+      const profile = await getUserProfile(user.uid);
+      setUserProfile(profile);
+    }
+  };
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
+      
+      if (user) {
+        // Load user profile from Firestore
+        let profile = await getUserProfile(user.uid);
+        
+        // If no profile exists, create one (for existing users or Google sign-in)
+        if (!profile) {
+          await createUserProfile(user.uid, {
+            name: user.displayName || 'Coffee Lover',
+            email: user.email || '',
+            avatar: user.photoURL || '',
+          });
+          profile = await getUserProfile(user.uid);
+        }
+        
+        setUserProfile(profile);
+      } else {
+        setUserProfile(null);
+      }
+      
       setLoading(false);
     });
+    
     return () => unsubscribe();
   }, [auth]);
 
@@ -65,11 +98,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value: AuthContextType = {
     user,
+    userProfile,
     loading,
     signUp,
     signIn,
     signInWithGoogle,
     signOutUser,
+    refreshUserProfile,
   };
 
   return (

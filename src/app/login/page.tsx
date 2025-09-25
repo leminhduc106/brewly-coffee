@@ -22,10 +22,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/auth-context';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { createUserProfile } from '@/lib/user-service';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }).optional(),
+  birthday: z.string().optional(),
 });
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -49,6 +52,8 @@ export default function LoginPage() {
     defaultValues: {
       email: '',
       password: '',
+      name: '',
+      birthday: '',
     },
   });
 
@@ -91,7 +96,18 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       if (activeTab === 'signup') {
-        await signUp(values.email, values.password);
+        const userCredential = await signUp(values.email, values.password);
+        
+        // Create user profile in Firestore with birthday
+        if (userCredential.user) {
+          await createUserProfile(userCredential.user.uid, {
+            name: values.name || userCredential.user.displayName || 'Coffee Lover',
+            email: values.email,
+            avatar: userCredential.user.photoURL || '',
+            birthday: values.birthday || undefined,
+          });
+        }
+        
         toast({ title: "Account created successfully!", description: "Please sign in with your new credentials." });
         setActiveTab('signin');
         form.reset();
@@ -131,6 +147,21 @@ export default function LoginPage() {
         </span>
       </div>
     </div>
+      {activeTab === 'signup' && (
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Your name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
       <FormField
         control={form.control}
         name="email"
@@ -175,6 +206,28 @@ export default function LoginPage() {
           </FormItem>
         )}
       />
+      {activeTab === 'signup' && (
+        <FormField
+          control={form.control}
+          name="birthday"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Birthday (Optional)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="date" 
+                  {...field} 
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </FormControl>
+              <div className="text-xs text-muted-foreground">
+                We'll surprise you with special birthday rewards! 🎂
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
       <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {activeTab === 'signin' ? 'Sign In' : 'Create Account'}
