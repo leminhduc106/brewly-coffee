@@ -1,4 +1,28 @@
-import type { Product, Store, User, Order } from './types';
+export const contactlessPickupInstructions: ContactlessPickupInstructions[] = [
+  {
+    storeId: '1',
+    pickupCode: 'A1B2C3',
+    mapUrl: 'https://www.openstreetmap.org/export/embed.html?bbox=-118.2457%2C34.0502%2C-118.2417%2C34.0542&layer=mapnik',
+    steps: [
+      'Arrive at Brewly Downtown and park in the designated pickup zone.',
+      'Open your Brewly app and show your pickup code to the staff at the counter.',
+      'Your order will be placed on the contactless pickup shelf. Collect your items when your code is called.',
+      'Enjoy your order!'
+    ],
+  },
+  {
+    storeId: '2',
+    pickupCode: 'D4E5F6',
+    mapUrl: 'https://www.openstreetmap.org/export/embed.html?bbox=-118.2557%2C34.0602%2C-118.2517%2C34.0642&layer=mapnik',
+    steps: [
+      'Arrive at Brewly Uptown and use the curbside pickup entrance.',
+      'Show your pickup code to the staff at the window.',
+      'Your order will be placed on the contactless pickup table. Wait for your code to be called.',
+      'Take your order and enjoy!'
+    ],
+  },
+];
+import type { Product, Store, User, Order, ContactlessPickupInstructions } from './types';
 
 export const featuredProducts: Product[] = [
   {

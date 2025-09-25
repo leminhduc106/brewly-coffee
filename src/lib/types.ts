@@ -1,3 +1,9 @@
+export interface ContactlessPickupInstructions {
+  storeId: string;
+  pickupCode: string;
+  mapUrl: string;
+  steps: string[];
+}
 
 export interface Product {
   id: string;

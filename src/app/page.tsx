@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { FeedbackForm } from '@/components/feedback-form';
 import { submitOrderFeedback } from '@/lib/feedback-service';
 import { StoreHours } from '@/components/store-hours';
+import { ContactlessPickupInstructions } from '@/components/contactless-pickup-instructions';
 
 export default function Home() {
   const { userProfile, refreshUserProfile } = useAuth();
@@ -163,8 +164,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Store Hours & Holiday Notices */}
-      <StoreHours />
+
+  {/* Store Hours & Holiday Notices */}
+  <StoreHours />
+
+  {/* Contactless Pickup Instructions */}
+  <ContactlessPickupInstructions storeId="1" />
 
       {/* Promo Banner Carousel */}
       <section className="py-20 md:py-28 bg-accent text-accent-foreground">

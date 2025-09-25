@@ -132,7 +132,7 @@ A modern, feature-rich coffee shop web app built with Next.js, TypeScript, Tailw
 - [ ] Multi-language Support
 - [ ] Order Repeat/Quick Reorder
 - [x] Store Hours & Holiday Notices
-- [ ] Contactless Pickup Instructions
+- [x] Contactless Pickup Instructions
 - [ ] Guest Checkout
 
 ---
