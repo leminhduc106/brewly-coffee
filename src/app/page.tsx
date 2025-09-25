@@ -27,6 +27,7 @@ import { FeedbackForm } from '@/components/feedback-form';
 import { submitOrderFeedback } from '@/lib/feedback-service';
 import { StoreHours } from '@/components/store-hours';
 import { ContactlessPickupInstructions } from '@/components/contactless-pickup-instructions';
+import { StoreAnnouncements } from '@/components/store-announcements';
 
 export default function Home() {
   const { userProfile, refreshUserProfile } = useAuth();
@@ -102,6 +103,7 @@ export default function Home() {
   const nextBirthdayDays = userProfile ? getNextBirthdayDays(userProfile.birthday) : undefined;
 
   return (
+
     <div className="flex flex-col bg-background">
       {/* Hero Section */}
       <section className="relative h-[80vh] min-h-[600px] w-full">
@@ -136,6 +138,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+      {/* Store Announcements / Promos */}
+      <StoreAnnouncements />
 
       {/* Birthday Banner */}
       {userProfile && (isBirthday || (nextBirthdayDays !== undefined && nextBirthdayDays <= 3)) && (
@@ -237,7 +241,7 @@ export default function Home() {
   <div className="lg:col-span-5 flex flex-col gap-16">
           {/* Loyalty & Rewards Section */}
           <section id="loyalty">
-            <h2 className="font-headline text-5xl mb-12 text-primary">Loyalty & Rewards</h2>
+            <h2 className="font-headline text-5xl mb-12 text-primary text-center">Loyalty & Rewards</h2>
             <Card className="overflow-hidden shadow-2xl rounded-3xl w-full">
               <CardHeader className="flex flex-row items-center justify-between bg-muted/30 p-6">
                 <div className="flex items-center gap-4">
@@ -286,7 +290,7 @@ export default function Home() {
 
           {/* Order History Section */}
           <section id="orders">
-            <h2 className="font-headline text-5xl mb-12 text-primary">Your Order History</h2>
+            <h2 className="font-headline text-5xl my-14 text-primary text-center">Your Order History</h2>
             <Card className="shadow-2xl rounded-3xl w-full">
               <CardContent className="p-8 flex flex-col gap-4">
                 {pastOrders.length > 0

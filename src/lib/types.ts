@@ -1,3 +1,12 @@
+export interface StoreAnnouncement {
+  id: string;
+  title: string;
+  message: string;
+  type: 'promo' | 'info' | 'event';
+  imageUrl?: string;
+  startDate?: string;
+  endDate?: string;
+}
 export interface ContactlessPickupInstructions {
   storeId: string;
   pickupCode: string;

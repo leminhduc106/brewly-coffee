@@ -1,3 +1,30 @@
+export const storeAnnouncements: StoreAnnouncement[] = [
+  {
+    id: 'promo1',
+    title: 'Pumpkin Spice Latte Returns!',
+    message: 'Celebrate fall with our seasonal favorite. Available until October 31.',
+    type: 'promo',
+    imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=80',
+    startDate: '2025-09-15',
+    endDate: '2025-10-31',
+  },
+  {
+    id: 'event1',
+    title: 'Live Music Friday',
+    message: 'Join us for live acoustic music every Friday 6-8pm at Brewly Downtown.',
+    type: 'event',
+    imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80',
+    startDate: '2025-09-01',
+    endDate: '2025-12-31',
+  },
+  {
+    id: 'info1',
+    title: 'New Store Hours',
+    message: 'Uptown location now open until 10pm on weekends!',
+    type: 'info',
+    startDate: '2025-09-20',
+  },
+];
 export const contactlessPickupInstructions: ContactlessPickupInstructions[] = [
   {
     storeId: '1',
@@ -22,7 +49,7 @@ export const contactlessPickupInstructions: ContactlessPickupInstructions[] = [
     ],
   },
 ];
-import type { Product, Store, User, Order, ContactlessPickupInstructions } from './types';
+import type { Product, Store, User, Order, ContactlessPickupInstructions, StoreAnnouncement } from './types';
 
 export const featuredProducts: Product[] = [
   {
