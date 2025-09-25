@@ -38,6 +38,8 @@ export interface Order {
   paymentMethod: 'cash' | 'qr' | 'points';
   createdAt: string;
   status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+  feedback?: string; // User's written feedback
+  rating?: number;   // User's rating (1-5 stars)
 }
 
 export interface User {

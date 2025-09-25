@@ -144,6 +144,8 @@ export const pastOrders: Order[] = [
     paymentMethod: 'qr',
     createdAt: '2023-10-26T10:00:00Z',
     status: 'completed',
+    feedback: 'Great service and delicious coffee!',
+    rating: 5,
   },
   {
     id: 'order002',
@@ -153,6 +155,8 @@ export const pastOrders: Order[] = [
     paymentMethod: 'cash',
     createdAt: '2023-10-20T14:30:00Z',
     status: 'completed',
+    feedback: '',
+    rating: 0,
   },
   {
     id: 'order003',

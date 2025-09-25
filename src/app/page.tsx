@@ -1,4 +1,3 @@
-
 'use client';
 import React from 'react';
 import Image from 'next/image';
@@ -24,6 +23,8 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/context/auth-context';
 import { isTodayUserBirthday, getNextBirthdayDays, updateUserProfile } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
+import { FeedbackForm } from '@/components/feedback-form';
+import { submitOrderFeedback } from '@/lib/feedback-service';
 
 export default function Home() {
   const { userProfile, refreshUserProfile } = useAuth();
@@ -278,102 +279,70 @@ export default function Home() {
             <h2 className="font-headline text-5xl mb-12 text-primary">Your Order History</h2>
             <Card className="shadow-2xl rounded-3xl">
               <CardContent className="p-8 flex flex-col gap-4">
-                {pastOrders.length > 0 ? pastOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="flex justify-between items-center p-4 border rounded-2xl hover:bg-muted/50 hover:shadow-md hover:border-primary/20 transition-all duration-300"
-                  >
-                    <div>
-                      <p className="font-semibold text-lg">Order #{order.id}</p>
-                      <p className="text-base text-muted-foreground flex items-center gap-2 mt-1">
-                        <Clock className="w-4 h-4" />
-                        {new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-xl text-primary">
-                        ${order.total.toFixed(2)}
-                      </p>
-                      <Badge
-                        variant={
-                          order.status === 'completed'
-                            ? 'default'
-                            : order.status === 'preparing'
-                            ? 'secondary'
-                            : order.status === 'ready'
-                            ? 'outline'
-                            : 'secondary'
-                        }
-                        className={
-                          order.status === 'completed'
-                            ? 'bg-green-600 hover:bg-green-600/90 text-white mt-1'
-                            : order.status === 'preparing'
-                            ? 'bg-yellow-600 hover:bg-yellow-600/90 text-white mt-1'
-                            : order.status === 'ready'
-                            ? 'bg-blue-600 hover:bg-blue-600/90 text-white mt-1'
-                            : 'mt-1'
-                        }
+                {pastOrders.length > 0
+                  ? pastOrders.map((order) => (
+                      <div
+                        key={order.id}
+                        className="flex flex-col gap-2 p-4 border rounded-2xl hover:bg-muted/50 hover:shadow-md hover:border-primary/20 transition-all duration-300"
                       >
-                        {order.status}
-                      </Badge>
-                    </div>
-                  </div>
-                )) : <p className="text-muted-foreground text-center p-8">No past orders found.</p>}
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-semibold text-lg">Order #{order.id}</p>
+                            <p className="text-base text-muted-foreground flex items-center gap-2 mt-1">
+                              <Clock className="w-4 h-4" />
+                              {new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-xl text-primary">
+                              ${order.total.toFixed(2)}
+                            </p>
+                            <Badge
+                              variant={
+                                order.status === 'completed'
+                                  ? 'default'
+                                  : order.status === 'preparing'
+                                  ? 'secondary'
+                                  : order.status === 'ready'
+                                  ? 'outline'
+                                  : 'secondary'
+                              }
+                              className={
+                                order.status === 'completed'
+                                  ? 'bg-green-600 hover:bg-green-600/90 text-white mt-1'
+                                  : order.status === 'preparing'
+                                  ? 'bg-yellow-600 hover:bg-yellow-600/90 text-white mt-1'
+                                  : order.status === 'ready'
+                                  ? 'bg-blue-600 hover:bg-blue-600/90 text-white mt-1'
+                                  : 'mt-1'
+                              }
+                            >
+                              {order.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        {/* Feedback Form for completed orders */}
+                        {order.status === 'completed' && (
+                          <FeedbackForm
+                            orderId={order.id}
+                            initialRating={order.rating}
+                            initialFeedback={order.feedback}
+                            onSubmit={async (rating, feedback) => {
+                              await submitOrderFeedback(order.id, rating, feedback);
+                              toast({
+                                title: 'Feedback submitted!',
+                                description: 'Thank you for helping us improve.',
+                              });
+                            }}
+                          />
+                        )}
+                      </div>
+                    ))
+                  : <p className="text-muted-foreground text-center p-8">No past orders found.</p>}
               </CardContent>
             </Card>
           </section>
-
-          {/* Referral Program Section */}
-          <section id="referral">
-            <h2 className="font-headline text-5xl mb-12 text-primary">Refer Friends</h2>
-            <ReferralSystem 
-              userReferralCode={userProfile?.referralCode || "BREW123"}
-              totalReferrals={5} 
-              earnedPoints={250} 
-            />
-          </section>
         </div>
-
-        {/* Sidebar-like content: Store Locator */}
-        <aside className="lg:col-span-2">
-          <section id="stores" className="sticky top-28">
-            <h2 className="font-headline text-5xl mb-12 text-primary">Our Stores</h2>
-            <div className="flex flex-col gap-8">
-              {stores.map((store) => (
-                <Card key={store.id} className="overflow-hidden shadow-2xl rounded-3xl group">
-                  <div className="h-48 bg-muted overflow-hidden">
-                     <Image
-                      src={`https://picsum.photos/seed/${store.id}/600/400`}
-                      alt={`Image of ${store.name}`}
-                      width={600}
-                      height={400}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      data-ai-hint="coffee shop exterior"
-                    />
-                  </div>
-                  <CardContent className="p-6">
-                    <CardTitle className="font-body text-2xl font-bold">
-                      {store.name}
-                    </CardTitle>
-                    <p className="text-muted-foreground text-base mt-1 flex items-center gap-2">
-                      <MapPin className="w-4 h-4" /> {store.address}
-                    </p>
-                    <p className="text-base text-muted-foreground mt-2">
-                      {store.openingHours}
-                    </p>
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto mt-4 text-primary text-base"
-                    >
-                      Open in Google Maps{' '}
-                      <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
-        </aside>
       </div>
 
       {/* Personalized Recommendations */}
