@@ -223,12 +223,12 @@ export default function Home() {
       </section>
 
       <div className="container mx-auto px-4 md:px-6 grid lg:grid-cols-5 gap-16 py-20 md:py-28">
-        {/* Main Content: Loyalty & Orders */}
-        <div className="lg:col-span-3 flex flex-col gap-16">
+  {/* Main Content: Loyalty & Orders */}
+  <div className="lg:col-span-5 flex flex-col gap-16">
           {/* Loyalty & Rewards Section */}
           <section id="loyalty">
             <h2 className="font-headline text-5xl mb-12 text-primary">Loyalty & Rewards</h2>
-            <Card className="overflow-hidden shadow-2xl rounded-3xl">
+            <Card className="overflow-hidden shadow-2xl rounded-3xl w-full">
               <CardHeader className="flex flex-row items-center justify-between bg-muted/30 p-6">
                 <div className="flex items-center gap-4">
                   <Image
@@ -277,7 +277,7 @@ export default function Home() {
           {/* Order History Section */}
           <section id="orders">
             <h2 className="font-headline text-5xl mb-12 text-primary">Your Order History</h2>
-            <Card className="shadow-2xl rounded-3xl">
+            <Card className="shadow-2xl rounded-3xl w-full">
               <CardContent className="p-8 flex flex-col gap-4">
                 {pastOrders.length > 0
                   ? pastOrders.map((order) => (
