@@ -23,7 +23,9 @@ import {
   QrCode,
 } from 'lucide-react';
 import type { CartItem } from '@/lib/types';
-import { pastOrders as mockPastOrders, sampleUser } from '@/lib/data';
+import { sampleUser } from '@/lib/data';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, Timestamp, getDocs, query, where } from 'firebase/firestore';
 import {
   GoogleGenerativeAI,
   HarmCategory,
@@ -37,7 +39,7 @@ const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 const model = genAI.getGenerativeModel({
-  model: 'gemini-1.5-flash',
+  model: 'gemini-1.5-pro',
 });
 
 const generationConfig = {
@@ -63,7 +65,7 @@ const safetySettings = [
   },
   {
     category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-    threshold: HarmBlockThreshold.BLOCK_MEDIUM_and_ABOVE,
+  threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
   },
 ];
 
@@ -89,7 +91,8 @@ async function calculateLoyaltyPoints(
   `;
 
   try {
-    const result = await model.generateContent(prompt, generationConfig, safetySettings);
+    const result = await model.generateContent(prompt, {
+    });
     const response = result.response;
     const text = response.text();
     // Clean the response to ensure it's valid JSON
@@ -143,13 +146,21 @@ export default function CheckoutPage() {
       // Simulate API call to place order
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      const newOrderId = `order${Math.floor(Math.random() * 1000)}`;
-      setOrderId(newOrderId);
+      // Save order to Firestore
+      const orderDoc = await addDoc(collection(db, 'orders'), {
+        userId: user.uid,
+        items: cart,
+        total: cartTotal,
+        paymentMethod,
+        createdAt: Timestamp.now().toDate().toISOString(),
+        status: 'completed',
+      });
+      setOrderId(orderDoc.id);
 
       // AI-powered loyalty points calculation
-      const pastOrderTotals = JSON.stringify(
-        mockPastOrders.map((o) => o.total)
-      );
+      // Fetch user's real past orders for loyalty calculation
+      const ordersSnapshot = await getDocs(query(collection(db, 'orders'), where('userId', '==', user.uid)));
+  const pastOrderTotals = JSON.stringify(ordersSnapshot.docs.map((doc: any) => doc.data().total));
       const pointsResult = await calculateLoyaltyPoints(
         cartTotal,
         user.uid,

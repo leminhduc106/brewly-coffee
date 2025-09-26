@@ -123,7 +123,6 @@ A modern, feature-rich coffee shop web app built with Next.js, TypeScript, Tailw
 - [x] Personalized Recommendations
 - [x] Order Status Tracking
 - [x] Referral Program
-- [x] Birthday Rewards
 - [ ] Push Notifications (Web)
 - [x] Store Announcements/Promos
 - [x] Feedback/Rating System

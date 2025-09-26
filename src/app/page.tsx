@@ -11,7 +11,9 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
-import { featuredProducts, stores, pastOrders, sampleUser } from '@/lib/data';
+import { featuredProducts, stores, sampleUser } from '@/lib/data';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { ProductCard } from '@/components/product-card';
 import { LoyaltyPointsCalculator } from '@/components/loyalty-points-calculator';
 import { Recommendations } from '@/components/recommendations';
@@ -28,18 +30,53 @@ import { submitOrderFeedback } from '@/lib/feedback-service';
 import { StoreHours } from '@/components/store-hours';
 import { ContactlessPickupInstructions } from '@/components/contactless-pickup-instructions';
 import { StoreAnnouncements } from '@/components/store-announcements';
+import { useCart } from '@/context/cart-context';
 
 export default function Home() {
+  // ...existing code...
+  const [orderHistory, setOrderHistory] = React.useState<any[]>([]);
+  const ORDERS_PER_PAGE = 5;
+  const [orderPage, setOrderPage] = React.useState(0);
+  const paginatedOrders = orderHistory.slice(orderPage * ORDERS_PER_PAGE, (orderPage + 1) * ORDERS_PER_PAGE);
   const { userProfile, refreshUserProfile } = useAuth();
   const { toast } = useToast();
-
-  // Get user favorites for personalized recommendations
+  const { repeatOrder } = useCart();
   const [favorites, setFavorites] = React.useState<string[]>(() => {
     if (typeof window !== 'undefined') {
       return JSON.parse(localStorage.getItem('favorites') || '[]');
     }
     return [];
   });
+  const { user } = useAuth();
+  React.useEffect(() => {
+    const fetchOrders = async () => {
+      const uid = userProfile?.uid || user?.uid;
+      if (!uid) {
+        setOrderHistory([]); // Clear order history on logout
+        return;
+      }
+      const ordersRef = collection(db, 'orders');
+      const q = query(ordersRef, where('userId', '==', uid));
+      const snapshot = await getDocs(q);
+      const orders = snapshot.docs.map(doc => {
+        const data = doc.data();
+        // Handle Firestore Timestamp
+        let createdAt = data.createdAt;
+        if (createdAt && typeof createdAt === 'object' && createdAt.toDate) {
+          createdAt = createdAt.toDate().toISOString();
+        }
+        return {
+          id: doc.id,
+          ...data,
+          createdAt,
+          status: data.status || 'completed',
+        };
+      });
+      console.log('Fetched orders:', orders);
+      setOrderHistory(orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    };
+    fetchOrders();
+  }, [userProfile, user]);
 
   const [birthdayRewardClaimed, setBirthdayRewardClaimed] = React.useState(false);
 
@@ -139,6 +176,31 @@ export default function Home() {
         </div>
       </section>
       {/* Store Announcements / Promos */}
+
+      {/* Store Locations Section for smooth scroll */}
+      <section id="stores" className="py-20 md:py-28">
+        <div className="container mx-auto px-4 md:px-6">
+          <h2 className="font-headline text-5xl text-center mb-16 text-primary">
+            Our Stores
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+            {stores.map((store) => (
+              <Card key={store.id} className="shadow-lg rounded-2xl">
+                <CardHeader>
+                  <CardTitle>{store.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-base text-muted-foreground mb-2">
+                    <MapPin className="inline-block w-4 h-4 mr-1" />
+                    {store.address}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{store.openingHours}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
       <StoreAnnouncements />
 
       {/* Birthday Banner */}
@@ -237,8 +299,7 @@ export default function Home() {
       </section>
 
       <div className="container mx-auto px-4 md:px-6 grid lg:grid-cols-5 gap-16 py-20 md:py-28">
-  {/* Main Content: Loyalty & Orders */}
-  <div className="lg:col-span-5 flex flex-col gap-16">
+        <div className="lg:col-span-5 flex flex-col gap-16">
           {/* Loyalty & Rewards Section */}
           <section id="loyalty">
             <h2 className="font-headline text-5xl mb-12 text-primary text-center">Loyalty & Rewards</h2>
@@ -288,74 +349,133 @@ export default function Home() {
             </Card>
           </section>
 
-          {/* Order History Section */}
-          <section id="orders">
-            <h2 className="font-headline text-5xl my-14 text-primary text-center">Your Order History</h2>
-            <Card className="shadow-2xl rounded-3xl w-full">
-              <CardContent className="p-8 flex flex-col gap-4">
-                {pastOrders.length > 0
-                  ? pastOrders.map((order) => (
-                      <div
-                        key={order.id}
-                        className="flex flex-col gap-2 p-4 border rounded-2xl hover:bg-muted/50 hover:shadow-md hover:border-primary/20 transition-all duration-300"
-                      >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-semibold text-lg">Order #{order.id}</p>
-                            <p className="text-base text-muted-foreground flex items-center gap-2 mt-1">
-                              <Clock className="w-4 h-4" />
-                              {new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                            </p>
+          {/* Order History Section (RBAC: only show for logged-in users with role 'user' or 'admin') */}
+          {(userProfile?.uid || user?.uid) && (userProfile?.role === 'user' || userProfile?.role === 'admin' || !userProfile?.role) && (
+            <section id="orders">
+              <h2 className="font-headline text-5xl my-14 text-primary text-center">Your Order History</h2>
+              <Card className="shadow-2xl rounded-3xl w-full">
+                <CardContent className="p-8 flex flex-col gap-4">
+                  {paginatedOrders.length > 0
+                    ? paginatedOrders.map((order) => (
+                        <div
+                          key={order.id}
+                          className="flex flex-col gap-2 p-4 border rounded-2xl hover:bg-muted/50 hover:shadow-md hover:border-primary/20 transition-all duration-300"
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-semibold text-lg">Order #{order.id}</p>
+                              <p className="text-base text-muted-foreground flex items-center gap-2 mt-1">
+                                <Clock className="w-4 h-4" />
+                                {new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                              </p>
+                              {/* List ordered items */}
+                              <ul className="mt-2 text-sm text-muted-foreground">
+                                {order.items && order.items.length > 0 ? (
+                                  order.items.map((item: any) => (
+                                    <li key={item.cartId || item.id} className="mb-1">
+                                      <span className="font-medium text-primary">{item.name}</span> &times; {item.quantity}
+                                      {item.selectedSize && (
+                                        <span className="ml-2">Size: {item.selectedSize}</span>
+                                      )}
+                                      {item.selectedMilk && (
+                                        <span className="ml-2">Milk: {item.selectedMilk}</span>
+                                      )}
+                                    </li>
+                                  ))
+                                ) : (
+                                  <li>No items found for this order.</li>
+                                )}
+                              </ul>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-xl text-primary">
+                                ${order.total.toFixed(2)}
+                              </p>
+                              <Badge
+                                variant={
+                                  order.status === 'completed'
+                                    ? 'default'
+                                    : order.status === 'preparing'
+                                    ? 'secondary'
+                                    : order.status === 'ready'
+                                    ? 'outline'
+                                    : 'secondary'
+                                }
+                                className={
+                                  order.status === 'completed'
+                                    ? 'bg-green-600 hover:bg-green-600/90 text-white mt-1'
+                                    : order.status === 'preparing'
+                                    ? 'bg-yellow-600 hover:bg-yellow-600/90 text-white mt-1'
+                                    : order.status === 'ready'
+                                    ? 'bg-blue-600 hover:bg-blue-600/90 text-white mt-1'
+                                    : 'mt-1'
+                                }
+                              >
+                                {order.status}
+                              </Badge>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-bold text-xl text-primary">
-                              ${order.total.toFixed(2)}
-                            </p>
-                            <Badge
-                              variant={
-                                order.status === 'completed'
-                                  ? 'default'
-                                  : order.status === 'preparing'
-                                  ? 'secondary'
-                                  : order.status === 'ready'
-                                  ? 'outline'
-                                  : 'secondary'
-                              }
-                              className={
-                                order.status === 'completed'
-                                  ? 'bg-green-600 hover:bg-green-600/90 text-white mt-1'
-                                  : order.status === 'preparing'
-                                  ? 'bg-yellow-600 hover:bg-yellow-600/90 text-white mt-1'
-                                  : order.status === 'ready'
-                                  ? 'bg-blue-600 hover:bg-blue-600/90 text-white mt-1'
-                                  : 'mt-1'
-                              }
+                          {/* Repeat Order Button */}
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition"
+                              onClick={() => {
+                                repeatOrder(order.items);
+                                toast({
+                                  title: 'Order repeated!',
+                                  description: 'Your cart has been updated with this order.',
+                                });
+                              }}
                             >
-                              {order.status}
-                            </Badge>
+                              Repeat Order
+                            </button>
                           </div>
+                          {/* Feedback Form for completed orders */}
+                          {order.status === 'completed' && (
+                            <FeedbackForm
+                              orderId={order.id}
+                              initialRating={order.rating}
+                              initialFeedback={order.feedback}
+                              onSubmit={async (rating, feedback) => {
+                                await submitOrderFeedback(order.id, rating, feedback);
+                                toast({
+                                  title: 'Feedback submitted!',
+                                  description: 'Thank you for helping us improve.',
+                                });
+                              }}
+                            />
+                          )}
                         </div>
-                        {/* Feedback Form for completed orders */}
-                        {order.status === 'completed' && (
-                          <FeedbackForm
-                            orderId={order.id}
-                            initialRating={order.rating}
-                            initialFeedback={order.feedback}
-                            onSubmit={async (rating, feedback) => {
-                              await submitOrderFeedback(order.id, rating, feedback);
-                              toast({
-                                title: 'Feedback submitted!',
-                                description: 'Thank you for helping us improve.',
-                              });
-                            }}
-                          />
-                        )}
-                      </div>
-                    ))
-                  : <p className="text-muted-foreground text-center p-8">No past orders found.</p>}
-              </CardContent>
-            </Card>
-          </section>
+                      ))
+                    : <p className="text-muted-foreground text-center p-8">No past orders found.</p>}
+                  {/* Pagination Controls */}
+                  {orderHistory.length > ORDERS_PER_PAGE && (
+                    <div className="flex justify-center gap-4 mt-6">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={orderPage === 0}
+                        onClick={() => setOrderPage(orderPage - 1)}
+                      >
+                        Previous
+                      </Button>
+                      <span className="px-4 py-2 text-muted-foreground">
+                        Page {orderPage + 1} of {Math.ceil(orderHistory.length / ORDERS_PER_PAGE)}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={(orderPage + 1) * ORDERS_PER_PAGE >= orderHistory.length}
+                        onClick={() => setOrderPage(orderPage + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </section>
+          )}
         </div>
       </div>
 

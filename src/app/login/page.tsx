@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function LoginPage() {
 
   const [isSignUp, setIsSignUp] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
   const router = useRouter();
   const { signUp, signIn, signInWithGoogle, loading } = useAuth();
   const { toast } = useToast();
@@ -40,6 +41,8 @@ export default function LoginPage() {
   };
 
   const handleSubmit = async (data: { email: string; password: string }) => {
+    if (localLoading) return;
+    setLocalLoading(true);
     try {
       if (isSignUp) {
         await signUp(data.email, data.password);
@@ -60,10 +63,14 @@ export default function LoginPage() {
         title: "Authentication Error",
         description: getFriendlyError(e),
       });
+    } finally {
+      setLocalLoading(false);
     }
   };
 
   const handleGoogle = async () => {
+    if (localLoading) return;
+    setLocalLoading(true);
     try {
       await signInWithGoogle();
       toast({ title: "Signed in!", description: "Welcome back!" });
@@ -74,6 +81,8 @@ export default function LoginPage() {
         title: "Google Sign-in Error",
         description: getFriendlyError(e),
       });
+    } finally {
+      setLocalLoading(false);
     }
   };
 
@@ -101,23 +110,25 @@ export default function LoginPage() {
             disabled={loading}
             autoComplete={isSignUp ? "new-password" : "current-password"}
           />
-          <Button type="submit" className="w-full" disabled={loading}>
-            {isSignUp ? "Create Account" : "Sign In"}
+          <Button type="submit" className="w-full" disabled={loading || localLoading}>
+            {(loading || localLoading)
+              ? (isSignUp ? "Creating Account..." : "Signing In...")
+              : (isSignUp ? "Create Account" : "Sign In")}
           </Button>
         </form>
         <Button
           variant="outline"
           className="w-full mt-4"
           onClick={handleGoogle}
-          disabled={loading}
+          disabled={loading || localLoading}
         >
-          Continue with Google
+          {(loading || localLoading) ? "Processing..." : "Continue with Google"}
         </Button>
         <div className="mt-4 text-center">
           <button
             className="text-blue-600 hover:underline text-sm"
             onClick={() => setIsSignUp((v) => !v)}
-            disabled={loading}
+            disabled={loading || localLoading}
           >
             {isSignUp
               ? "Already have an account? Sign In"

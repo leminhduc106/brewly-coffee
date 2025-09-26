@@ -50,6 +50,7 @@ export interface CartItem extends Product {
   quantity: number;
   selectedSize: string;
   selectedMilk: string;
+  selectedToppings?: string[];
 }
 
 export interface Order {
@@ -74,4 +75,5 @@ export interface User {
   referralCode?: string;
   referredBy?: string;
   birthday?: string; // ISO string format (YYYY-MM-DD)
+  role?: 'user' | 'admin'; // For RBAC
 }
