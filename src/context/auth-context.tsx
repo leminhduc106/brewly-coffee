@@ -1,115 +1,66 @@
 
 "use client";
 
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { 
-  getAuth, 
-  onAuthStateChanged, 
-  createUserWithEmailAndPassword, 
+import React, { createContext, useContext, useEffect, useState } from "react";
+import {
+  getAuth,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
-  User as FirebaseUser
+  User as FirebaseUser,
 } from "firebase/auth";
-import { app } from '@/lib/firebase';
-import { getUserProfile, createUserProfile } from '@/lib/user-service';
-import { User } from '@/lib/types';
+import { app } from "@/lib/firebase";
 
-interface AuthContextType {
+type AuthContextType = {
   user: FirebaseUser | null;
-  userProfile: User | null;
   loading: boolean;
-  signUp: (email: string, pass: string) => Promise<any>;
-  signIn: (email: string, pass: string) => Promise<any>;
+  signUp: (email: string, password: string) => Promise<any>;
+  signIn: (email: string, password: string) => Promise<any>;
   signInWithGoogle: () => Promise<any>;
   signOutUser: () => Promise<void>;
-  refreshUserProfile: () => Promise<void>;
-}
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
 };
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [userProfile, setUserProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const auth = getAuth(app);
 
-  const refreshUserProfile = async () => {
-    if (user) {
-      const profile = await getUserProfile(user.uid);
-      setUserProfile(profile);
-    }
-  };
-
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      
-      if (user) {
-        // Load user profile from Firestore
-        let profile = await getUserProfile(user.uid);
-        
-        // If no profile exists, create one (for existing users or Google sign-in)
-        if (!profile) {
-          await createUserProfile(user.uid, {
-            name: user.displayName || 'Coffee Lover',
-            email: user.email || '',
-            avatar: user.photoURL || '',
-          });
-          profile = await getUserProfile(user.uid);
-        }
-        
-        setUserProfile(profile);
-      } else {
-        setUserProfile(null);
-      }
-      
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
       setLoading(false);
     });
-    
     return () => unsubscribe();
   }, [auth]);
 
-  const signUp = (email: string, pass: string) => {
-    return createUserWithEmailAndPassword(auth, email, pass);
-  };
-  
-  const signIn = (email: string, pass: string) => {
-    return signInWithEmailAndPassword(auth, email, pass);
-  };
-
+  const signUp = (email: string, password: string) =>
+    createUserWithEmailAndPassword(auth, email, password);
+  const signIn = (email: string, password: string) =>
+    signInWithEmailAndPassword(auth, email, password);
   const signInWithGoogle = () => {
     const provider = new GoogleAuthProvider();
     return signInWithPopup(auth, provider);
   };
-
-  const signOutUser = () => {
-    return signOut(auth);
-  };
-
-  const value: AuthContextType = {
-    user,
-    userProfile,
-    loading,
-    signUp,
-    signIn,
-    signInWithGoogle,
-    signOutUser,
-    refreshUserProfile,
-  };
+  const signOutUser = () => signOut(auth);
 
   return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
+    <AuthContext.Provider
+      value={{ user, loading, signUp, signIn, signInWithGoogle, signOutUser }}
+    >
+      {children}
     </AuthContext.Provider>
   );
 };
+
+
