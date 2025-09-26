@@ -1,7 +1,7 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useCart } from '@/context/cart-context';
@@ -26,86 +26,14 @@ import type { CartItem } from '@/lib/types';
 import { sampleUser } from '@/lib/data';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, Timestamp, getDocs, query, where } from 'firebase/firestore';
-import {
-  GoogleGenerativeAI,
-  HarmCategory,
-  HarmBlockThreshold,
-} from '@google/generative-ai';
 
+// Type definitions for checkout steps and payment methods
 type CheckoutStep = 'review' | 'payment' | 'confirmation';
 type PaymentMethod = 'cash' | 'qr' | 'points';
 
-const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(API_KEY);
-
-const model = genAI.getGenerativeModel({
-  model: 'gemini-1.5-pro',
-});
-
-const generationConfig = {
-  temperature: 0.2,
-  topP: 0.95,
-  topK: 64,
-  maxOutputTokens: 8192,
-  responseMimeType: 'application/json',
-};
-
-const safetySettings = [
-  {
-    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-  threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-  },
-];
-
-async function calculateLoyaltyPoints(
-  orderTotal: number,
-  userId: string,
-  pastOrderHistory: string
-): Promise<{ loyaltyPoints: number }> {
-  const prompt = `You are a loyalty point system for a coffee shop. Your response must be a valid JSON object.
-
-  Given the order total, user ID, and past order history, you will respond with the number of loyalty points the user should receive.
-  The JSON output should be in the format: { "loyaltyPoints": <number> }.
-
-  RULES:
-  - If the user has no prior order history (pastOrderHistory is an empty array '[]'), give them 10 points for every dollar spent.
-  - If the user has a prior order history, calculate the average of the last 3 order totals. Award 10 points for every dollar spent over their average, and 5 points for every dollar spent under their average.
-  - The final point value must be a whole integer. Round any decimal results.
-
-  DATA:
-  - Order Total: ${orderTotal}
-  - User ID: ${userId}
-  - Past Order History (JSON array of amounts): ${pastOrderHistory}
-  `;
-
-  try {
-    const result = await model.generateContent(prompt, {
-    });
-    const response = result.response;
-    const text = response.text();
-    // Clean the response to ensure it's valid JSON
-    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const parsedResult = JSON.parse(cleanedText);
-    return {
-      loyaltyPoints: Math.round(parsedResult.loyaltyPoints || 0),
-    };
-  } catch (error) {
-    console.error('AI Loyalty Points calculation failed:', error);
-    // Fallback to a simple calculation if AI fails
-    return { loyaltyPoints: Math.round(orderTotal * 5) };
-  }
+// Simple loyalty points calculation: 10 points per dollar spent
+function calculateLoyaltyPoints(orderTotal: number): { loyaltyPoints: number } {
+  return { loyaltyPoints: Math.round(orderTotal * 10) };
 }
 
 export default function CheckoutPage() {
@@ -129,49 +57,85 @@ export default function CheckoutPage() {
       router.push('/login');
       return;
     }
-     if (!API_KEY) {
+
+    if (!user.uid) {
       toast({
         variant: 'destructive',
-        title: 'Configuration Error',
-        description:
-          'The AI feature is not configured. Please set the API key.',
+        title: 'Authentication Error',
+        description: 'Invalid user session. Please log in again.',
       });
-      setIsLoading(false);
+      router.push('/login');
       return;
     }
 
-
     setIsLoading(true);
     try {
-      // Simulate API call to place order
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Save order to Firestore
-      const orderDoc = await addDoc(collection(db, 'orders'), {
+      // Prepare order data
+      const orderData: {
+        userId: string;
+        items: CartItem[];
+        total: number;
+        paymentMethod: PaymentMethod;
+        createdAt: string;
+        status: string;
+        pointsUsed?: number;
+      } = {
         userId: user.uid,
         items: cart,
         total: cartTotal,
         paymentMethod,
         createdAt: Timestamp.now().toDate().toISOString(),
         status: 'completed',
-      });
+      };
+
+      // Points payment: check and deduct points
+      if (paymentMethod === 'points') {
+        const pointsCost = Math.round(cartTotal * 100);
+        // For now, use sampleUser data since we don't have real user documents yet
+        // In production, you'd fetch from Firestore user documents
+        const userPoints = sampleUser.loyaltyPoints;
+        
+        if (userPoints < pointsCost) {
+          toast({
+            variant: 'destructive',
+            title: 'Insufficient Points',
+            description: 'You do not have enough points to pay for this order.',
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Note: In production, you'd deduct points from the user's Firestore document here
+        // For now, we'll just record that points were used
+        orderData.pointsUsed = pointsCost;
+      }
+
+      // Save order to Firestore
+      const orderDoc = await addDoc(collection(db, 'orders'), orderData);
       setOrderId(orderDoc.id);
 
-      // AI-powered loyalty points calculation
-      // Fetch user's real past orders for loyalty calculation
-      const ordersSnapshot = await getDocs(query(collection(db, 'orders'), where('userId', '==', user.uid)));
-  const pastOrderTotals = JSON.stringify(ordersSnapshot.docs.map((doc: any) => doc.data().total));
-      const pointsResult = await calculateLoyaltyPoints(
-        cartTotal,
-        user.uid,
-        pastOrderTotals
-      );
+      // Calculate loyalty points (for earning new points)
+      const pointsResult = calculateLoyaltyPoints(cartTotal);
+
+      // Note: In production, you'd update user loyalty points in Firestore here
+      // For now, we'll just show the points earned in the success message
 
       toast({
         title: 'Order Placed Successfully!',
-        description: `You've earned ${pointsResult.loyaltyPoints} loyalty points.`,
+        description:
+          paymentMethod === 'points'
+            ? `You used ${orderData.pointsUsed} points.`
+            : `You've earned ${pointsResult.loyaltyPoints} loyalty points.`,
       });
 
+      // Store payment method and userId in localStorage for confirmation step
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('paymentMethod', paymentMethod);
+        window.localStorage.setItem('userId', user.uid);
+      }
+      
       clearCart();
       setStep('confirmation');
     } catch (error) {
@@ -179,8 +143,7 @@ export default function CheckoutPage() {
       toast({
         variant: 'destructive',
         title: 'Order Failed',
-        description:
-          'There was a problem placing your order. Please try again.',
+        description: 'There was a problem placing your order. Please try again.',
       });
     } finally {
       setIsLoading(false);
@@ -394,21 +357,56 @@ const PaymentStep = ({
   );
 };
 
-const ConfirmationStep = ({ orderId }: { orderId: string | null }) => (
-  <div className="text-center py-8">
-    <CheckCircle className="h-24 w-24 text-green-500 mx-auto mb-6" />
-    <h2 className="font-headline text-4xl">Thank You!</h2>
-    <p className="text-lg text-muted-foreground mt-2">
-      Your order has been placed successfully.
-    </p>
-    {orderId && (
-      <p className="text-xl font-semibold mt-4">
-        Order ID: <span className="text-primary">{orderId}</span>
+const ConfirmationStep = ({ orderId }: { orderId: string | null }) => {
+  const [qrUrl, setQrUrl] = useState<string>('');
+  const [paymentMethod, setPaymentMethodState] = useState<PaymentMethod>('qr');
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedMethod = window.localStorage.getItem('paymentMethod') as PaymentMethod;
+      if (storedMethod) setPaymentMethodState(storedMethod);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (paymentMethod === 'qr' && orderId) {
+      const paymentLink = `https://brewly-coffee.com/pay?orderId=${orderId}`;
+      QRCode.toDataURL(paymentLink)
+        .then((url: string) => setQrUrl(url))
+        .catch(() => setQrUrl(''));
+    }
+  }, [paymentMethod, orderId]);
+
+  return (
+    <div className="text-center py-8">
+      <CheckCircle className="h-24 w-24 text-green-500 mx-auto mb-6" />
+      <h2 className="font-headline text-4xl">Thank You!</h2>
+      <p className="text-lg text-muted-foreground mt-2">
+        Your order has been placed successfully.
       </p>
-    )}
-    <p className="mt-4">
-      Please show this confirmation at the counter to pick up your order.
-    </p>
-  </div>
-);
+      {orderId && (
+        <p className="text-xl font-semibold mt-4">
+          Order ID: <span className="text-primary">{orderId}</span>
+        </p>
+      )}
+      {paymentMethod === 'qr' && (
+        <div className="mt-6">
+          <p className="font-semibold">Show this QR code at the counter to pay:</p>
+          <div className="flex justify-center mt-4">
+            {qrUrl ? (
+              <img src={qrUrl} alt="QR Code" className="w-32 h-32" />
+            ) : (
+              <span>Generating QR code...</span>
+            )}
+          </div>
+        </div>
+      )}
+      {paymentMethod === 'cash' && (
+        <p className="mt-6 font-semibold">Pay with cash at the counter when you pick up your order.</p>
+      )}
+      {paymentMethod === 'points' && (
+        <p className="mt-6 font-semibold">Paid with loyalty points. Thank you for being a loyal customer!</p>
+      )}
+    </div>
+  );
+};
 
