@@ -67,21 +67,45 @@ import type {
 export const featuredProducts: Product[] = [
   {
     id: "1",
+    name: "Vietnamese Drip Coffee",
+    nameVi: "Cà Phê Phin Việt Nam",
+    category: "ca-phe-truyen-thong",
+    type: "hot",
+    price: 3.5,
+    imageUrl: "https://picsum.photos/600/400",
+    description:
+      "Traditional Vietnamese drip coffee served with condensed milk.",
+    descriptionVi: "Cà phê phin truyền thống Việt Nam với sữa đặc ngọt ngào.",
+    origin: {
+      country: "Vietnam",
+      lat: 16.0,
+      lng: 108.0,
+      farmImageUrl: "https://picsum.photos/400/300?random=1",
+      story:
+        "From the rolling hills of Dalat, Vietnam's premier coffee region.",
+    },
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: ["Condensed Milk", "Dairy", "Black"],
+      toppings: [],
+    },
+  },
+  {
+    id: "2",
     name: "Caramel Macchiato",
-    nameVi: "Caramel Macchiato",
-    category: "coffee",
+    nameVi: "Macchiato Caramel",
+    category: "ca-phe-pha-may",
     type: "hot",
     price: 4.75,
-    imageUrl: "https://picsum.photos/600/400",
+    imageUrl: "https://picsum.photos/600/401",
     description: "Rich espresso with steamed milk and a sweet caramel drizzle.",
     descriptionVi: "Espresso đậm đà với sữa hấp và caramel ngọt ngào.",
     origin: {
       country: "Colombia",
       lat: 5.0,
       lng: -74.0,
-      farmImageUrl: "https://picsum.photos/400/300?random=1",
-      story:
-        "Sourced from high-altitude farms in the Colombian Andes, known for their rich, balanced flavor.",
+      farmImageUrl: "https://picsum.photos/400/300?random=2",
+      story: "Sourced from high-altitude farms in the Colombian Andes.",
     },
     options: {
       size: ["S", "M", "L"],
@@ -90,29 +114,290 @@ export const featuredProducts: Product[] = [
     },
   },
   {
-    id: "2",
-    name: "Iced Matcha Latte",
-    nameVi: "Matcha Latte Đá",
-    category: "tea",
+    id: "3",
+    name: "Mango Smoothie",
+    nameVi: "Sinh Tố Xoài",
+    category: "da-xay-smoothie",
     type: "cold",
     price: 5.25,
-    imageUrl: "https://picsum.photos/600/401",
-    description: "Earthy matcha green tea with cold milk, served over ice.",
-    descriptionVi: "Trà xanh matcha thơm với sữa lạnh, phục vụ với đá.",
+    imageUrl: "https://picsum.photos/600/402",
+    description:
+      "Fresh mango blended with ice and yogurt for a tropical treat.",
+    descriptionVi:
+      "Xoài tươi xay với đá và sữa chua tạo nên hương vị nhiệt đới.",
     options: {
       size: ["S", "M", "L"],
-      milkTypes: ["Dairy", "Oat", "Almond"],
+      milkTypes: ["Yogurt", "Coconut Milk", "Dairy"],
+      toppings: ["Whipped Cream", "Coconut Flakes"],
+    },
+  },
+];
+
+export const allProducts: Product[] = [
+  ...featuredProducts,
+  // NHÓM CÀ PHÊ TRUYỀN THỐNG VIỆT NAM
+  {
+    id: "4",
+    name: "Iced Vietnamese Coffee",
+    nameVi: "Cà Phê Đá Việt Nam",
+    category: "ca-phe-truyen-thong",
+    type: "cold",
+    price: 3.75,
+    imageUrl: "https://picsum.photos/600/403",
+    description:
+      "Traditional Vietnamese drip coffee served over ice with condensed milk.",
+    descriptionVi:
+      "Cà phê phin truyền thống Việt Nam với đá và sữa đặc ngọt ngào.",
+    origin: {
+      country: "Vietnam",
+      lat: 16.0,
+      lng: 108.0,
+      farmImageUrl: "https://picsum.photos/400/300?random=4",
+      story: "From the coffee highlands of Dalat and Buon Ma Thuot.",
+    },
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: ["Condensed Milk", "Black"],
       toppings: [],
     },
   },
   {
-    id: "3",
+    id: "5",
+    name: "Egg Coffee",
+    nameVi: "Cà Phê Trứng",
+    category: "ca-phe-truyen-thong",
+    type: "hot",
+    price: 4.5,
+    imageUrl: "https://picsum.photos/600/404",
+    description: "Hanoi-style coffee topped with creamy whipped egg foam.",
+    descriptionVi: "Cà phê kiểu Hà Nội với lớp bọt trứng béo ngậy mịn màng.",
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: [],
+      toppings: [],
+    },
+  },
+
+  // NHÓM CÀ PHÊ PHA MÁY (ESPRESSO-BASED)
+  {
+    id: "6",
+    name: "Americano",
+    nameVi: "Americano",
+    category: "ca-phe-pha-may",
+    type: "hot",
+    price: 3.25,
+    imageUrl: "https://picsum.photos/600/405",
+    description:
+      "Bold espresso diluted with hot water for a clean, smooth taste.",
+    descriptionVi:
+      "Espresso đậm đà pha loãng với nước nóng tạo vị mạnh mẽ nhưng êm dịu.",
+    origin: {
+      country: "Brazil",
+      lat: -15.0,
+      lng: -47.0,
+      farmImageUrl: "https://picsum.photos/400/300?random=5",
+      story:
+        "From the fertile lands of Minas Gerais, Brazil's premier coffee region.",
+    },
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: [],
+      toppings: [],
+    },
+  },
+  {
+    id: "7",
+    name: "Cappuccino",
+    nameVi: "Cappuccino",
+    category: "ca-phe-pha-may",
+    type: "hot",
+    price: 4.25,
+    imageUrl: "https://picsum.photos/600/406",
+    description: "Espresso with steamed milk and a thick layer of milk foam.",
+    descriptionVi: "Espresso với sữa hấp và lớp bọt sữa dày đặc truyền thống.",
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: ["Dairy", "Oat", "Almond"],
+      toppings: ["Cinnamon", "Cocoa Powder"],
+    },
+  },
+  {
+    id: "8",
+    name: "Latte",
+    nameVi: "Latte",
+    category: "ca-phe-pha-may",
+    type: "hot",
+    price: 4.5,
+    imageUrl: "https://picsum.photos/600/407",
+    description: "Smooth espresso with steamed milk and light foam.",
+    descriptionVi: "Espresso mềm mại với sữa hấp và lớp bọt nhẹ êm dịu.",
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: ["Dairy", "Oat", "Almond", "Coconut"],
+      toppings: ["Vanilla Syrup", "Caramel Drizzle"],
+    },
+  },
+
+  // NHÓM TRÀ VÀ TRÀ SỮA
+  {
+    id: "9",
+    name: "Thai Milk Tea",
+    nameVi: "Trà Sữa Thái",
+    category: "tra-tra-sua",
+    type: "cold",
+    price: 4.75,
+    imageUrl: "https://picsum.photos/600/408",
+    description:
+      "Sweet and creamy Thai-style tea with condensed milk over ice.",
+    descriptionVi: "Trà sữa kiểu Thái ngọt ngào và béo ngậy với sữa đặc và đá.",
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: ["Condensed Milk", "Fresh Milk"],
+      toppings: ["Pearls", "Jelly", "Pudding"],
+    },
+  },
+  {
+    id: "10",
+    name: "Jasmine Green Tea",
+    nameVi: "Trà Xanh Hoa Nhài",
+    category: "tra-tra-sua",
+    type: "hot",
+    price: 3.5,
+    imageUrl: "https://picsum.photos/600/409",
+    description: "Delicate green tea infused with jasmine flowers.",
+    descriptionVi: "Trà xanh nhẹ nhàng thấm hương hoa nhài thơm ngát.",
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: [],
+      toppings: ["Honey", "Lemon Slice"],
+    },
+  },
+  {
+    id: "11",
+    name: "Taro Milk Tea",
+    nameVi: "Trà Sữa Khoai Môn",
+    category: "tra-tra-sua",
+    type: "cold",
+    price: 5.0,
+    imageUrl: "https://picsum.photos/600/410",
+    description: "Creamy taro-flavored milk tea with a beautiful purple color.",
+    descriptionVi: "Trà sữa vị khoai môn béo ngậy với màu tím đẹp mắt.",
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: ["Fresh Milk", "Coconut Milk"],
+      toppings: ["Pearls", "Taro Bits", "Whipped Cream"],
+    },
+  },
+
+  // NHÓM ĐÁ XAY (BLENDED/SMOOTHIE)
+  {
+    id: "12",
+    name: "Strawberry Smoothie",
+    nameVi: "Sinh Tố Dâu Tây",
+    category: "da-xay-smoothie",
+    type: "cold",
+    price: 5.5,
+    imageUrl: "https://picsum.photos/600/411",
+    description: "Fresh strawberries blended with yogurt and ice.",
+    descriptionVi: "Dâu tây tươi xay với sữa chua và đá mát lạnh.",
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: ["Yogurt", "Fresh Milk", "Coconut Milk"],
+      toppings: ["Whipped Cream", "Fresh Strawberries"],
+    },
+  },
+  {
+    id: "13",
+    name: "Avocado Smoothie",
+    nameVi: "Sinh Tố Bơ",
+    category: "da-xay-smoothie",
+    type: "cold",
+    price: 5.25,
+    imageUrl: "https://picsum.photos/600/412",
+    description: "Creamy avocado blended with condensed milk and ice.",
+    descriptionVi: "Bơ béo ngậy xay với sữa đặc và đá mát lạnh.",
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: ["Condensed Milk", "Fresh Milk"],
+      toppings: ["Coconut Flakes", "Condensed Milk Drizzle"],
+    },
+  },
+  {
+    id: "14",
+    name: "Coffee Frappe",
+    nameVi: "Cà Phê Frappe",
+    category: "da-xay-smoothie",
+    type: "cold",
+    price: 4.75,
+    imageUrl: "https://picsum.photos/600/413",
+    description: "Iced coffee blended with milk and whipped cream.",
+    descriptionVi: "Cà phê đá xay với sữa tươi và kem tuyết trắng xốp.",
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: ["Fresh Milk", "Oat Milk"],
+      toppings: ["Whipped Cream", "Coffee Beans", "Chocolate Syrup"],
+    },
+  },
+
+  // NHÓM SODA & NƯỚC GIẢI KHÁT KHÁC
+  {
+    id: "15",
+    name: "Lemon Soda",
+    nameVi: "Soda Chanh",
+    category: "soda-nuoc-giai-khat",
+    type: "cold",
+    price: 3.75,
+    imageUrl: "https://picsum.photos/600/414",
+    description: "Refreshing lemon soda with fresh mint leaves.",
+    descriptionVi: "Soda chanh tươi mát với lá bạc hà thơm mát.",
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: [],
+      toppings: ["Mint Leaves", "Lemon Slices"],
+    },
+  },
+  {
+    id: "16",
+    name: "Passion Fruit Juice",
+    nameVi: "Nước Chanh Dây",
+    category: "soda-nuoc-giai-khat",
+    type: "cold",
+    price: 4.0,
+    imageUrl: "https://picsum.photos/600/415",
+    description: "Fresh passion fruit juice with a tangy and sweet flavor.",
+    descriptionVi: "Nước chanh dây tươi với vị chua ngọt đặc trưng.",
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: [],
+      toppings: ["Ice", "Sugar Syrup"],
+    },
+  },
+  {
+    id: "17",
+    name: "Orange Juice",
+    nameVi: "Nước Cam Tươi",
+    category: "soda-nuoc-giai-khat",
+    type: "cold",
+    price: 4.25,
+    imageUrl: "https://picsum.photos/600/416",
+    description: "Freshly squeezed orange juice packed with vitamin C.",
+    descriptionVi: "Nước cam vắt tươi giàu vitamin C tốt cho sức khỏe.",
+    options: {
+      size: ["S", "M", "L"],
+      milkTypes: [],
+      toppings: ["Orange Slices", "Ice"],
+    },
+  },
+
+  // MÓN ĂN KÈM
+  {
+    id: "18",
     name: "Almond Croissant",
     nameVi: "Bánh Sừng Bò Hạnh Nhân",
-    category: "pastries",
-    type: "hot", // N/A for pastries but for filtering purposes
+    category: "mon-an-kem",
+    type: "hot",
     price: 3.5,
-    imageUrl: "https://picsum.photos/600/402",
+    imageUrl: "https://picsum.photos/600/417",
     description: "Buttery croissant filled with sweet almond paste.",
     descriptionVi: "Bánh sừng bò bơ nhân kem hạnh nhân ngọt ngào.",
     options: {
@@ -121,91 +406,55 @@ export const featuredProducts: Product[] = [
       toppings: [],
     },
   },
-];
-
-export const allProducts: Product[] = [
-  ...featuredProducts,
   {
-    id: "4",
-    name: "Classic Drip Coffee",
-    nameVi: "Cà Phê Phin Truyền Thống",
-    category: "coffee",
-    type: "hot",
-    price: 2.5,
-    imageUrl: "https://picsum.photos/600/403",
-    description:
-      "A well-rounded, flavorful, and aromatic cup of our house blend.",
-    descriptionVi: "Tách cà phê house blend đậm đà, thơm ngon và cân bằng.",
-    origin: {
-      country: "Brazil",
-      lat: -15.0,
-      lng: -47.0,
-      farmImageUrl: "https://picsum.photos/400/300?random=2",
-      story:
-        "From the fertile lands of Minas Gerais, Brazil's premier coffee region.",
-    },
-    options: {
-      size: ["S", "M", "L"],
-      milkTypes: ["Dairy", "Oat", "Almond"],
-      toppings: [],
-    },
-  },
-  {
-    id: "5",
-    name: "Cold Brew",
-    nameVi: "Cà Phê Cold Brew",
-    category: "coffee",
-    type: "cold",
-    price: 4.5,
-    imageUrl: "https://picsum.photos/600/404",
-    description:
-      "Slow-steeped for a smooth, rich, and less acidic coffee experience.",
-    descriptionVi: "Ủ chậm để có vị mềm mại, đậm đà và ít chua.",
-    origin: {
-      country: "Ethiopia",
-      lat: 9.0,
-      lng: 38.7,
-      farmImageUrl: "https://picsum.photos/400/300?random=3",
-      story:
-        "From the birthplace of coffee, Ethiopian highlands offer unique floral notes.",
-    },
-    options: {
-      size: ["S", "M", "L"],
-      milkTypes: ["Dairy", "Oat", "Almond"],
-      toppings: ["Sweet Cream"],
-    },
-  },
-  {
-    id: "6",
-    name: "Earl Grey Tea",
-    nameVi: "Trà Earl Grey",
-    category: "tea",
-    type: "hot",
-    price: 3.0,
-    imageUrl: "https://picsum.photos/600/405",
-    description:
-      "Black tea with a distinctive citrus flavor from bergamot oil.",
-    descriptionVi: "Trà đen với hương cam quýt đặc trưng từ tinh dầu bergamot.",
-    options: {
-      size: ["S", "M", "L"],
-      milkTypes: [],
-      toppings: ["Lemon Slice"],
-    },
-  },
-  {
-    id: "7",
+    id: "19",
     name: "Chocolate Chip Cookie",
     nameVi: "Bánh Quy Choco Chip",
-    category: "pastries",
-    type: "hot", // N/A
+    category: "mon-an-kem",
+    type: "hot",
     price: 2.75,
-    imageUrl: "https://picsum.photos/600/406",
+    imageUrl: "https://picsum.photos/600/418",
     description: "A classic, gooey chocolate chip cookie, baked fresh.",
     descriptionVi: "Bánh quy chocolate chip truyền thống, nướng tươi mỗi ngày.",
     options: {
       size: [],
       milkTypes: [],
       toppings: [],
+    },
+  },
+  {
+    id: "20",
+    name: "Vietnamese Sandwich",
+    nameVi: "Bánh Mì Việt Nam",
+    category: "mon-an-kem",
+    type: "hot",
+    price: 6.5,
+    imageUrl: "https://picsum.photos/600/419",
+    description:
+      "Traditional Vietnamese sandwich with pork, pate, and fresh vegetables.",
+    descriptionVi: "Bánh mì truyền thống Việt Nam với thịt, pate và rau tươi.",
+    options: {
+      size: [],
+      milkTypes: [],
+      toppings: ["Extra Vegetables", "Chili Sauce", "Mayo"],
+    },
+  },
+  {
+    id: "21",
+    name: "Tiramisu",
+    nameVi: "Bánh Tiramisu",
+    category: "mon-an-kem",
+    type: "cold",
+    price: 4.5,
+    imageUrl: "https://picsum.photos/600/420",
+    description:
+      "Classic Italian dessert with coffee-soaked ladyfingers and mascarpone.",
+    descriptionVi:
+      "Bánh ngọt Italia truyền thống với bánh quy cà phê và kem mascarpone.",
+    options: {
+      size: [],
+      milkTypes: [],
+      toppings: ["Cocoa Powder", "Coffee Beans"],
     },
   },
 ];

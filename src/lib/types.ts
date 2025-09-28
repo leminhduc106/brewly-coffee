@@ -26,7 +26,13 @@ export interface Product {
   id: string;
   name: string;
   nameVi: string; // Vietnamese name
-  category: "coffee" | "tea" | "pastries";
+  category:
+    | "ca-phe-truyen-thong"
+    | "ca-phe-pha-may"
+    | "tra-tra-sua"
+    | "da-xay-smoothie"
+    | "soda-nuoc-giai-khat"
+    | "mon-an-kem";
   type: "hot" | "cold";
   price: number;
   imageUrl: string;
@@ -86,5 +92,5 @@ export interface User {
   referralCode?: string;
   referredBy?: string;
   birthday?: string; // ISO string format (YYYY-MM-DD)
-  role?: 'user' | 'admin'; // For RBAC
+  role?: "user" | "admin"; // For RBAC
 }
