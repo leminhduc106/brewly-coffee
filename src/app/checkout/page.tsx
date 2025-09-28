@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import QRCode from 'qrcode';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { useCart } from '@/context/cart-context';
-import { useAuth } from '@/context/auth-context';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from "react";
+import QRCode from "qrcode";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { useCart } from "@/context/cart-context";
+import { useAuth } from "@/context/auth-context";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import {
   CreditCard,
   DollarSign,
@@ -21,15 +21,22 @@ import {
   ArrowRight,
   ArrowLeft,
   QrCode,
-} from 'lucide-react';
-import type { CartItem } from '@/lib/types';
-import { sampleUser } from '@/lib/data';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, Timestamp, getDocs, query, where } from 'firebase/firestore';
+} from "lucide-react";
+import type { CartItem } from "@/lib/types";
+import { sampleUser } from "@/lib/data";
+import { db } from "@/lib/firebase";
+import {
+  collection,
+  addDoc,
+  Timestamp,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
 
 // Type definitions for checkout steps and payment methods
-type CheckoutStep = 'review' | 'payment' | 'confirmation';
-type PaymentMethod = 'cash' | 'qr' | 'points';
+type CheckoutStep = "review" | "payment" | "confirmation";
+type PaymentMethod = "cash" | "qr" | "points";
 
 // Simple loyalty points calculation: 10 points per dollar spent
 function calculateLoyaltyPoints(orderTotal: number): { loyaltyPoints: number } {
@@ -37,8 +44,8 @@ function calculateLoyaltyPoints(orderTotal: number): { loyaltyPoints: number } {
 }
 
 export default function CheckoutPage() {
-  const [step, setStep] = useState<CheckoutStep>('review');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('qr');
+  const [step, setStep] = useState<CheckoutStep>("review");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("qr");
   const [isLoading, setIsLoading] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
 
@@ -50,21 +57,21 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async () => {
     if (!user) {
       toast({
-        variant: 'destructive',
-        title: 'Authentication Error',
-        description: 'You must be signed in to place an order.',
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "You must be signed in to place an order.",
       });
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
     if (!user.uid) {
       toast({
-        variant: 'destructive',
-        title: 'Authentication Error',
-        description: 'Invalid user session. Please log in again.',
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "Invalid user session. Please log in again.",
       });
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
@@ -87,33 +94,33 @@ export default function CheckoutPage() {
         total: cartTotal,
         paymentMethod,
         createdAt: Timestamp.now().toDate().toISOString(),
-        status: 'completed',
+        status: "completed",
       };
 
       // Points payment: check and deduct points
-      if (paymentMethod === 'points') {
+      if (paymentMethod === "points") {
         const pointsCost = Math.round(cartTotal * 100);
         // For now, use sampleUser data since we don't have real user documents yet
         // In production, you'd fetch from Firestore user documents
         const userPoints = sampleUser.loyaltyPoints;
-        
+
         if (userPoints < pointsCost) {
           toast({
-            variant: 'destructive',
-            title: 'Insufficient Points',
-            description: 'You do not have enough points to pay for this order.',
+            variant: "destructive",
+            title: "Insufficient Points",
+            description: "You do not have enough points to pay for this order.",
           });
           setIsLoading(false);
           return;
         }
-        
+
         // Note: In production, you'd deduct points from the user's Firestore document here
         // For now, we'll just record that points were used
         orderData.pointsUsed = pointsCost;
       }
 
       // Save order to Firestore
-      const orderDoc = await addDoc(collection(db, 'orders'), orderData);
+      const orderDoc = await addDoc(collection(db, "orders"), orderData);
       setOrderId(orderDoc.id);
 
       // Calculate loyalty points (for earning new points)
@@ -123,27 +130,28 @@ export default function CheckoutPage() {
       // For now, we'll just show the points earned in the success message
 
       toast({
-        title: 'Order Placed Successfully!',
+        title: "Order Placed Successfully!",
         description:
-          paymentMethod === 'points'
+          paymentMethod === "points"
             ? `You used ${orderData.pointsUsed} points.`
             : `You've earned ${pointsResult.loyaltyPoints} loyalty points.`,
       });
 
       // Store payment method and userId in localStorage for confirmation step
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('paymentMethod', paymentMethod);
-        window.localStorage.setItem('userId', user.uid);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("paymentMethod", paymentMethod);
+        window.localStorage.setItem("userId", user.uid);
       }
-      
+
       clearCart();
-      setStep('confirmation');
+      setStep("confirmation");
     } catch (error) {
-      console.error('Failed to place order:', error);
+      console.error("Failed to place order:", error);
       toast({
-        variant: 'destructive',
-        title: 'Order Failed',
-        description: 'There was a problem placing your order. Please try again.',
+        variant: "destructive",
+        title: "Order Failed",
+        description:
+          "There was a problem placing your order. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -152,9 +160,9 @@ export default function CheckoutPage() {
 
   const renderStep = () => {
     switch (step) {
-      case 'review':
+      case "review":
         return <ReviewStep cart={cart} cartTotal={cartTotal} />;
-      case 'payment':
+      case "payment":
         return (
           <PaymentStep
             paymentMethod={paymentMethod}
@@ -163,7 +171,7 @@ export default function CheckoutPage() {
             orderTotal={cartTotal}
           />
         );
-      case 'confirmation':
+      case "confirmation":
         return <ConfirmationStep orderId={orderId} />;
     }
   };
@@ -175,9 +183,9 @@ export default function CheckoutPage() {
           Checkout
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
-          {step === 'confirmation'
-            ? 'Thank you for your order!'
-            : 'Complete your purchase in just a few steps.'}
+          {step === "confirmation"
+            ? "Thank you for your order!"
+            : "Complete your purchase in just a few steps."}
         </p>
       </div>
 
@@ -188,28 +196,32 @@ export default function CheckoutPage() {
           <Separator className="my-8" />
 
           <div className="flex justify-between items-center">
-            {step === 'payment' && (
+            {step === "payment" && (
               <Button
                 variant="outline"
                 size="lg"
-                onClick={() => setStep('review')}
+                onClick={() => setStep("review")}
               >
                 <ArrowLeft className="mr-2 h-5 w-5" />
                 Back to Review
               </Button>
             )}
 
-            {step !== 'confirmation' && step !== 'review' && (
+            {step !== "confirmation" && step !== "review" && (
               <div /> // Placeholder for spacing
             )}
-            
-            {step === 'review' && (
-              <Button size="lg" className="w-full" onClick={() => setStep('payment')}>
+
+            {step === "review" && (
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => setStep("payment")}
+              >
                 Proceed to Payment <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             )}
 
-            {step === 'payment' && (
+            {step === "payment" && (
               <Button
                 size="lg"
                 onClick={handlePlaceOrder}
@@ -220,15 +232,15 @@ export default function CheckoutPage() {
                 ) : (
                   <CreditCard className="mr-2 h-5 w-5" />
                 )}
-                {isLoading ? 'Processing...' : `Pay $${cartTotal.toFixed(2)}`}
+                {isLoading ? "Processing..." : `Pay $${cartTotal.toFixed(2)}`}
               </Button>
             )}
 
-            {step === 'confirmation' && (
+            {step === "confirmation" && (
               <Button
                 size="lg"
                 className="w-full"
-                onClick={() => router.push('/menu')}
+                onClick={() => router.push("/menu")}
               >
                 Continue Shopping
               </Button>
@@ -262,8 +274,11 @@ const ReviewStep = ({
               data-ai-hint="product image"
             />
             <div>
-              <p className="font-semibold text-lg">{item.name}</p>
-              <p className="text-sm text-muted-foreground">
+              <div className="flex flex-col">
+                <p className="font-semibold text-lg">{item.name}</p>
+                <p className="text-sm text-muted-foreground">({item.nameVi})</p>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
                 {item.quantity} x ${item.price.toFixed(2)}
               </p>
             </div>
@@ -323,7 +338,7 @@ const PaymentStep = ({
         >
           <RadioGroupItem value="cash" id="cash" />
           <DollarSign className="h-8 w-8 text-primary" />
-           <div className="flex-1">
+          <div className="flex-1">
             <p className="font-semibold text-lg">Pay with Cash</p>
             <p className="text-sm text-muted-foreground">
               Pay with cash at the counter when you pick up your order.
@@ -334,8 +349,8 @@ const PaymentStep = ({
           htmlFor="points"
           className={`flex items-center gap-4 p-4 border rounded-2xl ${
             canPayWithPoints
-              ? 'cursor-pointer hover:bg-muted/50 has-[:checked]:bg-primary/10 has-[:checked]:border-primary'
-              : 'cursor-not-allowed opacity-50'
+              ? "cursor-pointer hover:bg-muted/50 has-[:checked]:bg-primary/10 has-[:checked]:border-primary"
+              : "cursor-not-allowed opacity-50"
           }`}
         >
           <RadioGroupItem
@@ -344,10 +359,10 @@ const PaymentStep = ({
             disabled={!canPayWithPoints}
           />
           <Gift className="h-8 w-8 text-primary" />
-           <div className="flex-1">
+          <div className="flex-1">
             <p className="font-semibold text-lg">Pay with Points</p>
             <p className="text-sm text-muted-foreground">
-              {pointsCost.toLocaleString()} points needed. You have{' '}
+              {pointsCost.toLocaleString()} points needed. You have{" "}
               {userPoints.toLocaleString()}.
             </p>
           </div>
@@ -358,21 +373,23 @@ const PaymentStep = ({
 };
 
 const ConfirmationStep = ({ orderId }: { orderId: string | null }) => {
-  const [qrUrl, setQrUrl] = useState<string>('');
-  const [paymentMethod, setPaymentMethodState] = useState<PaymentMethod>('qr');
+  const [qrUrl, setQrUrl] = useState<string>("");
+  const [paymentMethod, setPaymentMethodState] = useState<PaymentMethod>("qr");
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedMethod = window.localStorage.getItem('paymentMethod') as PaymentMethod;
+    if (typeof window !== "undefined") {
+      const storedMethod = window.localStorage.getItem(
+        "paymentMethod"
+      ) as PaymentMethod;
       if (storedMethod) setPaymentMethodState(storedMethod);
     }
   }, []);
 
   useEffect(() => {
-    if (paymentMethod === 'qr' && orderId) {
+    if (paymentMethod === "qr" && orderId) {
       const paymentLink = `https://brewly-coffee.com/pay?orderId=${orderId}`;
       QRCode.toDataURL(paymentLink)
         .then((url: string) => setQrUrl(url))
-        .catch(() => setQrUrl(''));
+        .catch(() => setQrUrl(""));
     }
   }, [paymentMethod, orderId]);
 
@@ -388,9 +405,11 @@ const ConfirmationStep = ({ orderId }: { orderId: string | null }) => {
           Order ID: <span className="text-primary">{orderId}</span>
         </p>
       )}
-      {paymentMethod === 'qr' && (
+      {paymentMethod === "qr" && (
         <div className="mt-6">
-          <p className="font-semibold">Show this QR code at the counter to pay:</p>
+          <p className="font-semibold">
+            Show this QR code at the counter to pay:
+          </p>
           <div className="flex justify-center mt-4">
             {qrUrl ? (
               <img src={qrUrl} alt="QR Code" className="w-32 h-32" />
@@ -400,13 +419,16 @@ const ConfirmationStep = ({ orderId }: { orderId: string | null }) => {
           </div>
         </div>
       )}
-      {paymentMethod === 'cash' && (
-        <p className="mt-6 font-semibold">Pay with cash at the counter when you pick up your order.</p>
+      {paymentMethod === "cash" && (
+        <p className="mt-6 font-semibold">
+          Pay with cash at the counter when you pick up your order.
+        </p>
       )}
-      {paymentMethod === 'points' && (
-        <p className="mt-6 font-semibold">Paid with loyalty points. Thank you for being a loyal customer!</p>
+      {paymentMethod === "points" && (
+        <p className="mt-6 font-semibold">
+          Paid with loyalty points. Thank you for being a loyal customer!
+        </p>
       )}
     </div>
   );
 };
-

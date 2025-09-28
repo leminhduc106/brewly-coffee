@@ -1,89 +1,61 @@
-'use client';
-import React from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+"use client";
+import React from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from '@/components/ui/carousel';
-import { featuredProducts, stores, sampleUser } from '@/lib/data';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { ProductCard } from '@/components/product-card';
-import { LoyaltyPointsCalculator } from '@/components/loyalty-points-calculator';
-import { Recommendations } from '@/components/recommendations';
-import { ReferralSystem } from '@/components/referral-system';
-import { BirthdayBanner } from '@/components/birthday-banner';
-import { Badge } from '@/components/ui/badge';
-import { ArrowRight, MapPin, Gift, Clock } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { useAuth } from '@/context/auth-context';
-import { isTodayUserBirthday, getNextBirthdayDays, updateUserProfile } from '@/lib/user-service';
-import { useToast } from '@/hooks/use-toast';
-import { FeedbackForm } from '@/components/feedback-form';
-import { submitOrderFeedback } from '@/lib/feedback-service';
-import { StoreHours } from '@/components/store-hours';
-import { ContactlessPickupInstructions } from '@/components/contactless-pickup-instructions';
-import { StoreAnnouncements } from '@/components/store-announcements';
-import { useCart } from '@/context/cart-context';
+} from "@/components/ui/carousel";
+import { featuredProducts, stores, pastOrders, sampleUser } from "@/lib/data";
+import { ProductCard } from "@/components/product-card";
+import { LoyaltyPointsCalculator } from "@/components/loyalty-points-calculator";
+import { Recommendations } from "@/components/recommendations";
+import { ReferralSystem } from "@/components/referral-system";
+import { BirthdayBanner } from "@/components/birthday-banner";
+import { Badge } from "@/components/ui/badge";
+import { ArrowRight, MapPin, Gift, Clock } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/context/auth-context";
+import { useFavorites } from "@/context/favorites-context";
+import {
+  isTodayUserBirthday,
+  getNextBirthdayDays,
+  updateUserProfile,
+} from "@/lib/user-service";
+import { useToast } from "@/hooks/use-toast";
+import { FeedbackForm } from "@/components/feedback-form";
+import { submitOrderFeedback } from "@/lib/feedback-service";
+import { StoreHours } from "@/components/store-hours";
+import { ContactlessPickupInstructions } from "@/components/contactless-pickup-instructions";
+import { StoreAnnouncements } from "@/components/store-announcements";
 
 export default function Home() {
   // ...existing code...
   const [orderHistory, setOrderHistory] = React.useState<any[]>([]);
   const ORDERS_PER_PAGE = 5;
   const [orderPage, setOrderPage] = React.useState(0);
-  const paginatedOrders = orderHistory.slice(orderPage * ORDERS_PER_PAGE, (orderPage + 1) * ORDERS_PER_PAGE);
+  const paginatedOrders = orderHistory.slice(
+    orderPage * ORDERS_PER_PAGE,
+    (orderPage + 1) * ORDERS_PER_PAGE
+  );
   const { userProfile, refreshUserProfile } = useAuth();
+  const { favorites } = useFavorites();
   const { toast } = useToast();
-  const { repeatOrder } = useCart();
-  const [favorites, setFavorites] = React.useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      return JSON.parse(localStorage.getItem('favorites') || '[]');
-    }
-    return [];
-  });
-  const { user } = useAuth();
-  React.useEffect(() => {
-    const fetchOrders = async () => {
-      const uid = userProfile?.uid || user?.uid;
-      if (!uid) {
-        setOrderHistory([]); // Clear order history on logout
-        return;
-      }
-      const ordersRef = collection(db, 'orders');
-      const q = query(ordersRef, where('userId', '==', uid));
-      const snapshot = await getDocs(q);
-      const orders = snapshot.docs.map(doc => {
-        const data = doc.data();
-        // Handle Firestore Timestamp
-        let createdAt = data.createdAt;
-        if (createdAt && typeof createdAt === 'object' && createdAt.toDate) {
-          createdAt = createdAt.toDate().toISOString();
-        }
-        return {
-          id: doc.id,
-          ...data,
-          createdAt,
-          status: data.status || 'completed',
-        };
-      });
-      console.log('Fetched orders:', orders);
-      setOrderHistory(orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-    };
-    fetchOrders();
-  }, [userProfile, user]);
 
-  const [birthdayRewardClaimed, setBirthdayRewardClaimed] = React.useState(false);
+  const [birthdayRewardClaimed, setBirthdayRewardClaimed] =
+    React.useState(false);
 
   // Check if birthday reward is already claimed today
   React.useEffect(() => {
     if (userProfile && isTodayUserBirthday(userProfile.birthday)) {
-      const claimedToday = localStorage.getItem(`birthday-claimed-${userProfile.uid}-${new Date().toDateString()}`);
+      const claimedToday = localStorage.getItem(
+        `birthday-claimed-${userProfile.uid}-${new Date().toDateString()}`
+      );
       setBirthdayRewardClaimed(!!claimedToday);
     }
   }, [userProfile]);
@@ -95,52 +67,47 @@ export default function Home() {
       // Give 100 bonus points
       const newPoints = userProfile.loyaltyPoints + 100;
       await updateUserProfile(userProfile.uid, { loyaltyPoints: newPoints });
-      
+
       // Mark as claimed for today
-      localStorage.setItem(`birthday-claimed-${userProfile.uid}-${new Date().toDateString()}`, 'true');
+      localStorage.setItem(
+        `birthday-claimed-${userProfile.uid}-${new Date().toDateString()}`,
+        "true"
+      );
       setBirthdayRewardClaimed(true);
-      
+
       // Refresh user profile to get updated points
       await refreshUserProfile();
-      
+
       toast({
         title: "🎉 Birthday Reward Claimed!",
-        description: "100 loyalty points have been added to your account! Your free pastry is ready to redeem.",
+        description:
+          "100 loyalty points have been added to your account! Your free pastry is ready to redeem.",
         duration: 5000,
       });
     } catch (error) {
       toast({
-        variant: 'destructive',
+        variant: "destructive",
         title: "Error claiming reward",
         description: "Please try again later.",
       });
     }
   };
 
-  React.useEffect(() => {
-    const handleStorageChange = () => {
-      if (typeof window !== 'undefined') {
-        setFavorites(JSON.parse(localStorage.getItem('favorites') || '[]'));
+  const handleScrollTo =
+    (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+      e.preventDefault();
+      const element = document.getElementById(id);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
       }
     };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  const handleScrollTo = (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
 
   const isBirthday = userProfile && isTodayUserBirthday(userProfile.birthday);
-  const nextBirthdayDays = userProfile ? getNextBirthdayDays(userProfile.birthday) : undefined;
+  const nextBirthdayDays = userProfile
+    ? getNextBirthdayDays(userProfile.birthday)
+    : undefined;
 
   return (
-
     <div className="flex flex-col bg-background">
       {/* Hero Section */}
       <section className="relative h-[80vh] min-h-[600px] w-full">
@@ -163,12 +130,10 @@ export default function Home() {
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4">
             <Button size="lg" className="text-lg" asChild>
-              <Link href="/menu">
-                Order Now
-              </Link>
+              <Link href="/menu">Order Now</Link>
             </Button>
             <Button size="lg" variant="secondary" className="text-lg" asChild>
-              <a href="#stores" onClick={handleScrollTo('stores')}>
+              <a href="#stores" onClick={handleScrollTo("stores")}>
                 Find a Store
               </a>
             </Button>
@@ -194,7 +159,9 @@ export default function Home() {
                     <MapPin className="inline-block w-4 h-4 mr-1" />
                     {store.address}
                   </p>
-                  <p className="text-sm text-muted-foreground">{store.openingHours}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {store.openingHours}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -204,17 +171,18 @@ export default function Home() {
       <StoreAnnouncements />
 
       {/* Birthday Banner */}
-      {userProfile && (isBirthday || (nextBirthdayDays !== undefined && nextBirthdayDays <= 3)) && (
-        <div className="container mx-auto px-4 md:px-6 py-6">
-          <BirthdayBanner
-            userName={userProfile.name}
-            onClaimReward={handleClaimBirthdayReward}
-            isRewardClaimed={birthdayRewardClaimed}
-            nextBirthdayDays={nextBirthdayDays}
-          />
-        </div>
-      )}
-
+      {userProfile &&
+        (isBirthday ||
+          (nextBirthdayDays !== undefined && nextBirthdayDays <= 3)) && (
+          <div className="container mx-auto px-4 md:px-6 py-6">
+            <BirthdayBanner
+              userName={userProfile.name}
+              onClaimReward={handleClaimBirthdayReward}
+              isRewardClaimed={birthdayRewardClaimed}
+              nextBirthdayDays={nextBirthdayDays}
+            />
+          </div>
+        )}
 
       {/* Featured Products */}
       <section id="menu" className="py-20 md:py-28">
@@ -230,20 +198,16 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Store Hours & Holiday Notices */}
+      <StoreHours />
 
-  {/* Store Hours & Holiday Notices */}
-  <StoreHours />
-
-  {/* Contactless Pickup Instructions */}
-  <ContactlessPickupInstructions storeId="1" />
+      {/* Contactless Pickup Instructions */}
+      <ContactlessPickupInstructions storeId="1" />
 
       {/* Promo Banner Carousel */}
       <section className="py-20 md:py-28 bg-accent text-accent-foreground">
         <div className="container mx-auto px-4 md:px-6">
-          <Carousel
-            opts={{ loop: true }}
-            className="w-full max-w-5xl mx-auto"
-          >
+          <Carousel opts={{ loop: true }} className="w-full max-w-5xl mx-auto">
             <CarouselContent>
               <CarouselItem>
                 <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 text-center md:text-left p-6">
@@ -287,7 +251,9 @@ export default function Home() {
                       A perfect hybrid of a croissant and a donut. Flaky,
                       creamy, and utterly delicious. Try one today!
                     </p>
-                    <Button className="mt-6" size="lg" variant="secondary">Order Now</Button>
+                    <Button className="mt-6" size="lg" variant="secondary">
+                      Order Now
+                    </Button>
                   </div>
                 </div>
               </CarouselItem>
@@ -299,10 +265,13 @@ export default function Home() {
       </section>
 
       <div className="container mx-auto px-4 md:px-6 grid lg:grid-cols-5 gap-16 py-20 md:py-28">
+        {/* Main Content: Loyalty & Orders */}
         <div className="lg:col-span-5 flex flex-col gap-16">
           {/* Loyalty & Rewards Section */}
           <section id="loyalty">
-            <h2 className="font-headline text-5xl mb-12 text-primary text-center">Loyalty & Rewards</h2>
+            <h2 className="font-headline text-5xl mb-12 text-primary text-center">
+              Loyalty & Rewards
+            </h2>
             <Card className="overflow-hidden shadow-2xl rounded-3xl w-full">
               <CardHeader className="flex flex-row items-center justify-between bg-muted/30 p-6">
                 <div className="flex items-center gap-4">
@@ -334,148 +303,115 @@ export default function Home() {
                   <div className="flex justify-between items-end mb-2">
                     <p className="text-base font-medium">Your Points</p>
                     <p className="font-bold text-primary text-xl">
-                      {(userProfile?.loyaltyPoints || sampleUser.loyaltyPoints).toLocaleString()} / 2,000
+                      {(
+                        userProfile?.loyaltyPoints || sampleUser.loyaltyPoints
+                      ).toLocaleString()}{" "}
+                      / 2,000
                     </p>
                   </div>
                   <Progress
-                    value={((userProfile?.loyaltyPoints || sampleUser.loyaltyPoints) / 2000) * 100}
+                    value={
+                      ((userProfile?.loyaltyPoints ||
+                        sampleUser.loyaltyPoints) /
+                        2000) *
+                      100
+                    }
                     className="h-4"
                   />
                   <p className="text-sm text-muted-foreground mt-2">
-                    {2000 - (userProfile?.loyaltyPoints || sampleUser.loyaltyPoints)} points to Platinum Tier
+                    {2000 -
+                      (userProfile?.loyaltyPoints ||
+                        sampleUser.loyaltyPoints)}{" "}
+                    points to Platinum Tier
                   </p>
                 </div>
               </CardContent>
             </Card>
           </section>
 
-          {/* Order History Section (RBAC: only show for logged-in users with role 'user' or 'admin') */}
-          {(userProfile?.uid || user?.uid) && (userProfile?.role === 'user' || userProfile?.role === 'admin' || !userProfile?.role) && (
-            <section id="orders">
-              <h2 className="font-headline text-5xl my-14 text-primary text-center">Your Order History</h2>
-              <Card className="shadow-2xl rounded-3xl w-full">
-                <CardContent className="p-8 flex flex-col gap-4">
-                  {paginatedOrders.length > 0
-                    ? paginatedOrders.map((order) => (
-                        <div
-                          key={order.id}
-                          className="flex flex-col gap-2 p-4 border rounded-2xl hover:bg-muted/50 hover:shadow-md hover:border-primary/20 transition-all duration-300"
-                        >
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="font-semibold text-lg">Order #{order.id}</p>
-                              <p className="text-base text-muted-foreground flex items-center gap-2 mt-1">
-                                <Clock className="w-4 h-4" />
-                                {new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                              </p>
-                              {/* List ordered items */}
-                              <ul className="mt-2 text-sm text-muted-foreground">
-                                {order.items && order.items.length > 0 ? (
-                                  order.items.map((item: any) => (
-                                    <li key={item.cartId || item.id} className="mb-1">
-                                      <span className="font-medium text-primary">{item.name}</span> &times; {item.quantity}
-                                      {item.selectedSize && (
-                                        <span className="ml-2">Size: {item.selectedSize}</span>
-                                      )}
-                                      {item.selectedMilk && (
-                                        <span className="ml-2">Milk: {item.selectedMilk}</span>
-                                      )}
-                                    </li>
-                                  ))
-                                ) : (
-                                  <li>No items found for this order.</li>
-                                )}
-                              </ul>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold text-xl text-primary">
-                                ${order.total.toFixed(2)}
-                              </p>
-                              <Badge
-                                variant={
-                                  order.status === 'completed'
-                                    ? 'default'
-                                    : order.status === 'preparing'
-                                    ? 'secondary'
-                                    : order.status === 'ready'
-                                    ? 'outline'
-                                    : 'secondary'
-                                }
-                                className={
-                                  order.status === 'completed'
-                                    ? 'bg-green-600 hover:bg-green-600/90 text-white mt-1'
-                                    : order.status === 'preparing'
-                                    ? 'bg-yellow-600 hover:bg-yellow-600/90 text-white mt-1'
-                                    : order.status === 'ready'
-                                    ? 'bg-blue-600 hover:bg-blue-600/90 text-white mt-1'
-                                    : 'mt-1'
-                                }
-                              >
-                                {order.status}
-                              </Badge>
-                            </div>
-                          </div>
-                          {/* Repeat Order Button */}
-                          <div className="flex gap-2 mt-2">
-                            <button
-                              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition"
-                              onClick={() => {
-                                repeatOrder(order.items);
-                                toast({
-                                  title: 'Order repeated!',
-                                  description: 'Your cart has been updated with this order.',
-                                });
-                              }}
-                            >
-                              Repeat Order
-                            </button>
-                          </div>
-                          {/* Feedback Form for completed orders */}
-                          {order.status === 'completed' && (
-                            <FeedbackForm
-                              orderId={order.id}
-                              initialRating={order.rating}
-                              initialFeedback={order.feedback}
-                              onSubmit={async (rating, feedback) => {
-                                await submitOrderFeedback(order.id, rating, feedback);
-                                toast({
-                                  title: 'Feedback submitted!',
-                                  description: 'Thank you for helping us improve.',
-                                });
-                              }}
-                            />
-                          )}
+          {/* Order History Section */}
+          <section id="orders">
+            <h2 className="font-headline text-5xl my-14 text-primary text-center">
+              Your Order History
+            </h2>
+            <Card className="shadow-2xl rounded-3xl w-full">
+              <CardContent className="p-8 flex flex-col gap-4">
+                {pastOrders.length > 0 ? (
+                  pastOrders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="flex flex-col gap-2 p-4 border rounded-2xl hover:bg-muted/50 hover:shadow-md hover:border-primary/20 transition-all duration-300"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-lg">
+                            Order #{order.id}
+                          </p>
+                          <p className="text-base text-muted-foreground flex items-center gap-2 mt-1">
+                            <Clock className="w-4 h-4" />
+                            {new Date(order.createdAt).toLocaleDateString(
+                              "en-US",
+                              { year: "numeric", month: "long", day: "numeric" }
+                            )}
+                          </p>
                         </div>
-                      ))
-                    : <p className="text-muted-foreground text-center p-8">No past orders found.</p>}
-                  {/* Pagination Controls */}
-                  {orderHistory.length > ORDERS_PER_PAGE && (
-                    <div className="flex justify-center gap-4 mt-6">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={orderPage === 0}
-                        onClick={() => setOrderPage(orderPage - 1)}
-                      >
-                        Previous
-                      </Button>
-                      <span className="px-4 py-2 text-muted-foreground">
-                        Page {orderPage + 1} of {Math.ceil(orderHistory.length / ORDERS_PER_PAGE)}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={(orderPage + 1) * ORDERS_PER_PAGE >= orderHistory.length}
-                        onClick={() => setOrderPage(orderPage + 1)}
-                      >
-                        Next
-                      </Button>
+                        <div className="text-right">
+                          <p className="font-bold text-xl text-primary">
+                            ${order.total.toFixed(2)}
+                          </p>
+                          <Badge
+                            variant={
+                              order.status === "completed"
+                                ? "default"
+                                : order.status === "preparing"
+                                ? "secondary"
+                                : order.status === "ready"
+                                ? "outline"
+                                : "secondary"
+                            }
+                            className={
+                              order.status === "completed"
+                                ? "bg-green-600 hover:bg-green-600/90 text-white mt-1"
+                                : order.status === "preparing"
+                                ? "bg-yellow-600 hover:bg-yellow-600/90 text-white mt-1"
+                                : order.status === "ready"
+                                ? "bg-blue-600 hover:bg-blue-600/90 text-white mt-1"
+                                : "mt-1"
+                            }
+                          >
+                            {order.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      {/* Feedback Form for completed orders */}
+                      {order.status === "completed" && (
+                        <FeedbackForm
+                          orderId={order.id}
+                          initialRating={order.rating}
+                          initialFeedback={order.feedback}
+                          onSubmit={async (rating, feedback) => {
+                            await submitOrderFeedback(
+                              order.id,
+                              rating,
+                              feedback
+                            );
+                            toast({
+                              title: "Feedback submitted!",
+                              description: "Thank you for helping us improve.",
+                            });
+                          }}
+                        />
+                      )}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </section>
-          )}
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-center p-8">
+                    No past orders found.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </section>
         </div>
       </div>
 

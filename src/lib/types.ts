@@ -2,7 +2,7 @@ export interface StoreAnnouncement {
   id: string;
   title: string;
   message: string;
-  type: 'promo' | 'info' | 'event';
+  type: "promo" | "info" | "event";
   imageUrl?: string;
   startDate?: string;
   endDate?: string;
@@ -14,14 +14,25 @@ export interface ContactlessPickupInstructions {
   steps: string[];
 }
 
+export interface ProductOrigin {
+  country: string;
+  lat: number;
+  lng: number;
+  farmImageUrl: string;
+  story: string;
+}
+
 export interface Product {
   id: string;
   name: string;
-  category: 'coffee' | 'tea' | 'pastries';
-  type: 'hot' | 'cold';
+  nameVi: string; // Vietnamese name
+  category: "coffee" | "tea" | "pastries";
+  type: "hot" | "cold";
   price: number;
   imageUrl: string;
   description: string;
+  descriptionVi: string; // Vietnamese description
+  origin?: ProductOrigin; // Optional origin for coffee journey map
   options: {
     size: string[];
     milkTypes: string[];
@@ -58,11 +69,11 @@ export interface Order {
   userId: string;
   items: CartItem[];
   total: number;
-  paymentMethod: 'cash' | 'qr' | 'points';
+  paymentMethod: "cash" | "qr" | "points";
   createdAt: string;
-  status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+  status: "pending" | "preparing" | "ready" | "completed" | "cancelled";
   feedback?: string; // User's written feedback
-  rating?: number;   // User's rating (1-5 stars)
+  rating?: number; // User's rating (1-5 stars)
 }
 
 export interface User {
@@ -71,7 +82,7 @@ export interface User {
   email: string;
   avatar: string;
   loyaltyPoints: number;
-  tier: 'Silver' | 'Gold' | 'Platinum';
+  tier: "Silver" | "Gold" | "Platinum";
   referralCode?: string;
   referredBy?: string;
   birthday?: string; // ISO string format (YYYY-MM-DD)

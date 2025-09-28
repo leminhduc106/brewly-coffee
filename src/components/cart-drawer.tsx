@@ -58,8 +58,13 @@ export function CartDrawer() {
                         data-ai-hint="product image"
                       />
                       <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">
+                        <div className="flex flex-col">
+                          <p className="font-medium">{item.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            ({item.nameVi})
+                          </p>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
                           ${item.price.toFixed(2)}
                         </p>
                       </div>

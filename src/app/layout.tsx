@@ -1,12 +1,13 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { Header } from '@/components/header';
-import { Toaster } from '@/components/ui/toaster';
-import { CartProvider } from '@/context/cart-context';
-import { AuthProvider } from '@/context/auth-context';
-import { CartDrawer } from '@/components/cart-drawer';
-import { initializeApp, getApps } from 'firebase/app';
-import { firebaseConfig } from '@/lib/firebase';
+import type { Metadata } from "next";
+import "./globals.css";
+import { Header } from "@/components/header";
+import { Toaster } from "@/components/ui/toaster";
+import { CartProvider } from "@/context/cart-context";
+import { FavoritesProvider } from "@/context/favorites-context";
+import { AuthProvider } from "@/context/auth-context";
+import { CartDrawer } from "@/components/cart-drawer";
+import { initializeApp, getApps } from "firebase/app";
+import { firebaseConfig } from "@/lib/firebase";
 
 // Initialize Firebase only if it hasn't been initialized yet
 if (!getApps().length) {
@@ -14,8 +15,8 @@ if (!getApps().length) {
 }
 
 export const metadata: Metadata = {
-  title: 'Brewly Coffee',
-  description: 'A modern, responsive coffee shop web application.',
+  title: "Brewly Coffee",
+  description: "A modern, responsive coffee shop web application.",
 };
 
 export default function RootLayout({
@@ -27,7 +28,11 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin=""
+        />
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
           rel="stylesheet"
@@ -40,10 +45,12 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <AuthProvider>
           <CartProvider>
-            <Header />
-            <main>{children}</main>
-            <CartDrawer />
-            <Toaster />
+            <FavoritesProvider>
+              <Header />
+              <main>{children}</main>
+              <CartDrawer />
+              <Toaster />
+            </FavoritesProvider>
           </CartProvider>
         </AuthProvider>
       </body>
