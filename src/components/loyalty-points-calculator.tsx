@@ -20,8 +20,8 @@ import { Sparkles, Loader2 } from 'lucide-react';
 import { pastOrders, sampleUser } from '@/lib/data';
 
 const formSchema = z.object({
-  orderTotal: z.coerce.number().min(1, {
-    message: 'Order total must be at least $1.',
+  orderTotal: z.coerce.number().min(1000, {
+    message: 'Tổng đơn hàng phải ít nhất 1,000₫.',
   }),
 });
 
@@ -33,16 +33,16 @@ export function LoyaltyPointsCalculator() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      orderTotal: 15.5,
+      orderTotal: 100000,
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     setEarnedPoints(null);
-    // Dummy calculation
+    // Dummy calculation: 1 point per 1000 VND
     setTimeout(() => {
-      const points = Math.round(values.orderTotal * 10);
+      const points = Math.round(values.orderTotal / 1000);
       setEarnedPoints(points);
       setIsLoading(false);
     }, 1000);
@@ -60,12 +60,12 @@ export function LoyaltyPointsCalculator() {
             name="orderTotal"
             render={({ field }) => (
               <FormItem className="flex-1 w-full">
-                <FormLabel>Simulate Order Total ($)</FormLabel>
+                <FormLabel>Tổng đơn hàng (₫)</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
-                    step="0.01"
-                    placeholder="e.g., 25.50"
+                    step="1000"
+                    placeholder="VD: 100,000"
                     {...field}
                   />
                 </FormControl>
@@ -75,7 +75,7 @@ export function LoyaltyPointsCalculator() {
           />
           <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isLoading ? 'Calculating...' : 'Calculate'}
+            {isLoading ? 'Đang tính...' : 'Tính điểm'}
           </Button>
         </form>
       </Form>

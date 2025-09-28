@@ -357,7 +357,7 @@ export default function Home() {
                         </div>
                         <div className="text-right">
                           <p className="font-bold text-xl text-primary">
-                            ${order.total.toFixed(2)}
+                            {order.total.toLocaleString()}₫
                           </p>
                           <Badge
                             variant={

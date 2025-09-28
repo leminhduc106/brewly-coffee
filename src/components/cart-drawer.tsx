@@ -65,7 +65,7 @@ export function CartDrawer() {
                           </p>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
-                          ${item.price.toFixed(2)}
+                          {item.price.toLocaleString()}₫
                         </p>
                       </div>
                     </div>
@@ -112,7 +112,7 @@ export function CartDrawer() {
             <SheetFooter className="flex flex-col sm:flex-col gap-4 border-t bg-background p-6">
               <div className="flex justify-between text-lg font-semibold">
                 <span>Subtotal</span>
-                <span>${cartTotal.toFixed(2)}</span>
+                <span>{cartTotal.toLocaleString()}₫</span>
               </div>
               <p className="text-sm text-muted-foreground text-center">
                 Shipping and taxes calculated at checkout.
