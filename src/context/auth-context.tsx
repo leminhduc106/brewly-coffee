@@ -63,13 +63,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [user]);
 
-  const signUp = (email: string, password: string) =>
-    createUserWithEmailAndPassword(auth, email, password);
+  const signUp = async (email: string, password: string) => {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    // Create user profile in Firestore after successful signup
+    if (result.user) {
+      try {
+        const { createUserProfile } = await import("@/lib/user-service");
+        await createUserProfile(result.user.uid, {
+          email: result.user.email || "",
+          name: result.user.displayName || result.user.email || "",
+        });
+      } catch (error) {
+        console.error("Error creating user profile:", error);
+      }
+    }
+    return result;
+  };
+  
   const signIn = (email: string, password: string) =>
     signInWithEmailAndPassword(auth, email, password);
-  const signInWithGoogle = () => {
+    
+  const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    return signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
+    // Create user profile if it's a new user
+    if (result.user) {
+      try {
+        const { createUserProfile } = await import("@/lib/user-service");
+        await createUserProfile(result.user.uid, {
+          email: result.user.email || "",
+          name: result.user.displayName || result.user.email || "",
+        });
+      } catch (error) {
+        console.error("Error creating user profile:", error);
+      }
+    }
+    return result;
   };
   const signOutUser = () => signOut(auth);
 

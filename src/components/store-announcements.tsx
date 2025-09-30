@@ -31,7 +31,7 @@ export function StoreAnnouncements() {
                     : `From ${format(parseISO(a.startDate), 'MMM d')}`}
                 </p>
               )}
-              <span className={`mt-2 px-3 py-1 rounded-full text-xs font-semibold ${a.type === 'promo' ? 'bg-amber-100 text-amber-700' : a.type === 'event' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>{a.type.toUpperCase()}</span>
+              <span className={`mt-2 px-3 py-1 rounded-full text-xs font-semibold ${a.type === 'promo' ? 'bg-secondary/20 text-secondary-foreground' : a.type === 'event' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>{a.type.toUpperCase()}</span>
             </div>
           ))}
         </div>

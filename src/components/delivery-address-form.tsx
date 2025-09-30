@@ -287,9 +287,9 @@ export function DeliveryAddressForm({
                 <div className="flex items-start space-x-3">
                   <MapPin className="h-5 w-5 text-primary mt-0.5" />
                   <div>
-                    <h4 className="font-medium">Brewly Coffee - Chi nhánh chính</h4>
+                    <h4 className="font-medium">AMBASSADOR's COFFEE - Embassy District</h4>
                     <p className="text-sm text-muted-foreground mt-1">
-                      123 Nguyễn Văn Cư, Phường 4, Quận 5, TP. Hồ Chí Minh
+                      45 Hai Bà Trưng, Quận 1, Thành phố Hồ Chí Minh, Vietnam
                     </p>
                   </div>
                 </div>
@@ -302,7 +302,8 @@ export function DeliveryAddressForm({
                     <h4 className="font-medium">Giờ hoạt động</h4>
                     <div className="text-sm text-muted-foreground mt-1 space-y-1">
                       <p>Thứ 2 - Thứ 6: 7:00 - 22:00</p>
-                      <p>Thứ 7 - Chủ nhật: 8:00 - 23:00</p>
+                      <p>Thứ 7 - Chủ nhật: 8:00 - 21:00</p>
+                      <p>Diplomatic Hours: Phục vụ với tiêu chuẩn đại sứ quán</p>
                     </div>
                   </div>
                 </div>
@@ -310,8 +311,8 @@ export function DeliveryAddressForm({
 
               <div className="p-4 border-l-4 border-primary bg-primary/5">
                 <p className="text-sm">
-                  <strong>Lưu ý:</strong> Vui lòng mang theo mã đơn hàng khi đến nhận. 
-                  Đơn hàng sẽ được giữ trong vòng 2 ngày kể từ khi đặt.
+                  <strong>Diplomatic Note:</strong> Vui lòng mang theo mã đơn hàng khi đến Embassy District. 
+                  Đơn hàng sẽ được giữ trong vòng 48 giờ kể từ khi đặt.
                 </p>
               </div>
             </div>

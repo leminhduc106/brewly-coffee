@@ -29,53 +29,27 @@ export const storeAnnouncements: StoreAnnouncement[] = [
     startDate: "2025-09-20",
   },
 ];
-export const contactlessPickupInstructions: ContactlessPickupInstructions[] = [
-  {
-    storeId: "1",
-    pickupCode: "A1B2C3",
-    mapUrl:
-      "https://www.openstreetmap.org/export/embed.html?bbox=-118.2457%2C34.0502%2C-118.2417%2C34.0542&layer=mapnik",
-    steps: [
-      "Arrive at Brewly Downtown and park in the designated pickup zone.",
-      "Open your Brewly app and show your pickup code to the staff at the counter.",
-      "Your order will be placed on the contactless pickup shelf. Collect your items when your code is called.",
-      "Enjoy your order!",
-    ],
-  },
-  {
-    storeId: "2",
-    pickupCode: "D4E5F6",
-    mapUrl:
-      "https://www.openstreetmap.org/export/embed.html?bbox=-118.2557%2C34.0602%2C-118.2517%2C34.0642&layer=mapnik",
-    steps: [
-      "Arrive at Brewly Uptown and use the curbside pickup entrance.",
-      "Show your pickup code to the staff at the window.",
-      "Your order will be placed on the contactless pickup table. Wait for your code to be called.",
-      "Take your order and enjoy!",
-    ],
-  },
-];
+
 import type {
   Product,
   Store,
   User,
   Order,
-  ContactlessPickupInstructions,
   StoreAnnouncement,
 } from "./types";
 
 export const featuredProducts: Product[] = [
   {
     id: "1",
-    name: "Vietnamese Drip Coffee",
-    nameVi: "Cà Phê Phin Việt Nam",
+    name: "Ambassador's Signature Blend",
+    nameVi: "Pha Chế Đặc Trưng Đại Sứ",
     category: "ca-phe-truyen-thong",
     type: "hot",
     price: 85000,
     imageUrl: "https://picsum.photos/600/400",
     description:
-      "Traditional Vietnamese drip coffee served with condensed milk.",
-    descriptionVi: "Cà phê phin truyền thống Việt Nam với sữa đặc ngọt ngào.",
+      "Our flagship diplomatic blend combining the finest Vietnamese and Philippine coffee beans in perfect harmony.",
+    descriptionVi: "Pha chế hài hòa hoàn hảo giữa hạt cà phê Việt Nam và Philippines thượng hạng.",
     origin: {
       country: "Vietnam",
       lat: 16.0,
@@ -92,14 +66,14 @@ export const featuredProducts: Product[] = [
   },
   {
     id: "2",
-    name: "Caramel Macchiato",
-    nameVi: "Macchiato Caramel",
+    name: "Manila-Saigon Express",
+    nameVi: "Chuyến Tàu Manila-Sài Gòn",
     category: "ca-phe-pha-may",
     type: "hot",
     price: 115000,
     imageUrl: "https://picsum.photos/600/401",
-    description: "Rich espresso with steamed milk and a sweet caramel drizzle.",
-    descriptionVi: "Espresso đậm đà với sữa hấp và caramel ngọt ngào.",
+    description: "A fusion blend showcasing the coffee cultures of both nations - rich Filipino barako with Vietnamese robusta, finished with condensed milk.",
+    descriptionVi: "Pha chế kết hợp văn hóa cà phê của hai quốc gia - barako Philippines đậm đà với robusta Việt Nam, hoàn thiện bằng sữa đặc.",
     origin: {
       country: "Colombia",
       lat: 5.0,
@@ -462,40 +436,60 @@ export const allProducts: Product[] = [
 export const stores: Store[] = [
   {
     id: "1",
-    name: "Brewly Downtown",
-    address: "123 Main St, Anytown, USA",
-    lat: 34.0522,
-    lng: -118.2437,
-    openingHours: "7am - 7pm",
+    name: "AMBASSADOR's COFFEE - Embassy District",
+    address: "45 Hai Bà Trưng, Quận 1, Thành phố Hồ Chí Minh, Vietnam",
+    lat: 10.7769,
+    lng: 106.7009,
+    openingHours: "7:00 - 22:00",
     holidayNotices: [
       {
-        date: "2025-12-25",
-        message: "Closed for Christmas Day",
-        isClosed: true,
+        date: "2025-09-02",
+        message: "Special hours for Vietnam Independence Day: 8:00 - 20:00",
+        isClosed: false,
       },
       {
-        date: "2025-01-01",
-        message: "Open 9am - 3pm for New Year’s Day",
+        date: "2025-06-12",
+        message: "Celebrating Philippines Independence Day with special menu",
         isClosed: false,
       },
     ],
   },
   {
     id: "2",
-    name: "Brewly Uptown",
-    address: "456 Oak Ave, Anytown, USA",
-    lat: 34.0622,
-    lng: -118.2537,
-    openingHours: "6am - 9pm",
+    name: "AMBASSADOR's COFFEE - Cultural Quarter",
+    address: "78 Đống Đa, Quận Hai Bà Trưng, Hà Nội, Vietnam",
+    lat: 21.0285,
+    lng: 105.8542,
+    openingHours: "6:30 - 21:30",
     holidayNotices: [
       {
-        date: "2025-12-25",
-        message: "Closed for Christmas Day",
-        isClosed: true,
+        date: "2025-09-02",
+        message: "Special hours for Vietnam Independence Day: 8:00 - 20:00",
+        isClosed: false,
       },
       {
-        date: "2025-01-01",
-        message: "Open 8am - 2pm for New Year’s Day",
+        date: "2025-06-12",
+        message: "Celebrating Philippines Independence Day with special menu",
+        isClosed: false,
+      },
+    ],
+  },
+  {
+    id: "3",
+    name: "AMBASSADOR's COFFEE - Diplomatic Haven",
+    address: "156 Trần Hưng Đạo, Quận 5, Thành phố Hồ Chí Minh, Vietnam",
+    lat: 10.7575,
+    lng: 106.6835,
+    openingHours: "7:30 - 21:00",
+    holidayNotices: [
+      {
+        date: "2025-09-02",
+        message: "Special hours for Vietnam Independence Day: 8:00 - 20:00",
+        isClosed: false,
+      },
+      {
+        date: "2025-06-12",
+        message: "Celebrating Philippines Independence Day with special menu",
         isClosed: false,
       },
     ],

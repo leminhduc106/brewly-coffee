@@ -16,7 +16,7 @@ export function StoreHours() {
               <div className="space-y-2">
                 {store.holidayNotices && store.holidayNotices.length > 0 ? (
                   <>
-                    <h4 className="font-semibold text-base mb-2 text-amber-700">Holiday Notices:</h4>
+                    <h4 className="font-semibold text-base mb-2 text-secondary-foreground">Holiday Notices:</h4>
                     {store.holidayNotices
                       .filter(notice => isFuture(parseISO(notice.date)) || isToday(parseISO(notice.date)))
                       .map((notice) => (

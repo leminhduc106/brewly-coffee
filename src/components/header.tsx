@@ -57,11 +57,18 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
-        <Link href="/" className="flex items-center gap-2">
-          <Coffee className="h-6 w-6 text-primary" />
-          <span className="font-headline text-2xl font-bold text-primary">
-            Brewly Coffee
-          </span>
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground">
+            <Coffee className="h-4 w-4" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-headline text-xl font-bold text-primary leading-tight">
+              AMBASSADOR's COFFEE
+            </span>
+            <span className="text-xs text-muted-foreground hidden sm:block">
+              Where Philippines meets Vietnam
+            </span>
+          </div>
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
           <Link href="/menu" className="transition-colors hover:text-primary">

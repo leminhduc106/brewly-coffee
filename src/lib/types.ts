@@ -7,12 +7,7 @@ export interface StoreAnnouncement {
   startDate?: string;
   endDate?: string;
 }
-export interface ContactlessPickupInstructions {
-  storeId: string;
-  pickupCode: string;
-  mapUrl: string;
-  steps: string[];
-}
+
 
 export interface ProductOrigin {
   country: string;

@@ -30,9 +30,9 @@ A modern, feature-rich coffee shop web app built with Next.js, TypeScript, Tailw
 - **Accessibility Features (Planned):** High-contrast, large text, keyboard nav
 - **QR Code Loyalty (Planned):** Scan to earn/redeem points
 - **Multi-language Support (Planned):** English/Vietnamese toggle
-- **Order Repeat/Quick Reorder (Planned):** One-click reorder
-- **Store Hours & Holiday Notices (Planned):** Dynamic, Firestore-managed
-- **Contactless Pickup Instructions (Planned):** Map, code, clear steps
+- **Order Repeat/Quick Reorder:** One-click reorder functionality with cart integration
+- **Store Hours & Holiday Notices:** ✅ Dynamic, integrated with embassy locations
+- **Interactive Embassy Maps:** ✅ OpenStreetMap integration with Vietnamese locations
 - **Guest Checkout (Planned):** Order without sign-in (limited features)
 
 ---
@@ -129,9 +129,9 @@ A modern, feature-rich coffee shop web app built with Next.js, TypeScript, Tailw
 - [ ] Accessibility Features
 - [ ] QR Code Loyalty
 - [ ] Multi-language Support
-- [ ] Order Repeat/Quick Reorder
+- [x] Order Repeat/Quick Reorder
 - [x] Store Hours & Holiday Notices
-- [x] Contactless Pickup Instructions
+- [x] Interactive Embassy Maps with OpenStreetMap Integration
 - [ ] Guest Checkout
 
 ---
