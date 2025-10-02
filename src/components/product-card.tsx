@@ -31,20 +31,21 @@ export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
 
-  const [selectedSize, setSelectedSize] = React.useState(
-    product.options.size[0] || "M"
-  );
-  const [selectedMilk, setSelectedMilk] = React.useState(
-    product.options.milkTypes?.[0] || "Dairy"
-  );
-  const [selectedToppings, setSelectedToppings] = React.useState<string[]>([]);
+  // Smart defaults based on product category - no user selection needed
+  const getDefaultOptions = () => {
+    const defaultSize = product.options.size[0] || "Regular";
+    const defaultMilk = product.options.milkTypes?.[0] || "Regular";
+    
+    return {
+      size: defaultSize,
+      milk: defaultMilk,
+      toppings: [] // Start with no toppings for simplicity
+    };
+  };
 
-  const handleAddToCart = () => {
-    addItem(product, {
-      size: selectedSize,
-      milk: selectedMilk,
-      toppings: selectedToppings,
-    });
+  const handleQuickAdd = () => {
+    const options = getDefaultOptions();
+    addItem(product, options);
   };
 
   return (
@@ -122,14 +123,15 @@ export function ProductCard({ product }: ProductCardProps) {
           <p className="text-2xl font-bold text-primary">
             {product.price.toLocaleString()}₫
           </p>
-          <Button onClick={handleAddToCart} size="lg">
+          <Button onClick={handleQuickAdd} size="lg">
             <Plus className="mr-2 h-5 w-5" /> Add
           </Button>
         </CardFooter>
       </Card>
-      <DialogContent className="sm:max-w-[600px]">
+      {/* Simplified Modal - Just for viewing details */}
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="font-headline text-3xl flex items-center gap-2">
+          <DialogTitle className="font-headline text-2xl flex items-center gap-2">
             <div className="flex flex-col">
               <span>{product.name}</span>
               <span className="text-lg font-normal text-muted-foreground">
@@ -145,83 +147,21 @@ export function ProductCard({ product }: ProductCardProps) {
             <p className="italic">({product.descriptionVi})</p>
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-6 py-4 px-2 sm:px-4 max-h-[70vh] overflow-y-auto">
+        
+        <div className="space-y-4">
           <Image
             src={product.imageUrl}
             alt={product.name}
-            width={600}
-            height={400}
-            className="rounded-lg object-cover w-full aspect-[3/2] mb-2"
+            width={500}
+            height={300}
+            className="rounded-lg object-cover w-full aspect-[5/3]"
           />
-          <div className="space-y-4">
-            {/* Size Selector */}
-            <div>
-              <label className="block font-medium mb-1">Size</label>
-              <select
-                className="w-full border rounded-lg px-3 py-2"
-                value={selectedSize}
-                onChange={(e) => setSelectedSize(e.target.value)}
-              >
-                {product.options.size.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/* Milk Selector */}
-            {product.options.milkTypes &&
-              product.options.milkTypes.length > 0 && (
-                <div>
-                  <label className="block font-medium mb-1">Milk</label>
-                  <select
-                    className="w-full border rounded-lg px-3 py-2"
-                    value={selectedMilk}
-                    onChange={(e) => setSelectedMilk(e.target.value)}
-                  >
-                    {product.options.milkTypes.map((milk) => (
-                      <option key={milk} value={milk}>
-                        {milk}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            {/* Toppings Selector */}
-            {product.options.toppings &&
-              product.options.toppings.length > 0 && (
-                <div>
-                  <label className="block font-medium mb-1">Toppings</label>
-                  <div className="flex flex-wrap gap-2">
-                    {product.options.toppings.map((topping) => (
-                      <label
-                        key={topping}
-                        className="flex items-center gap-1 bg-muted px-2 py-1 rounded-lg"
-                      >
-                        <input
-                          type="checkbox"
-                          value={topping}
-                          checked={selectedToppings.includes(topping)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedToppings([
-                                ...selectedToppings,
-                                topping,
-                              ]);
-                            } else {
-                              setSelectedToppings(
-                                selectedToppings.filter((t) => t !== topping)
-                              );
-                            }
-                          }}
-                        />
-                        {topping}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-            <Button className="mt-6 w-full" size="lg" onClick={handleAddToCart}>
+
+          <div className="flex items-center justify-between pt-4 border-t">
+            <p className="text-2xl font-bold text-primary">
+              {product.price.toLocaleString()}₫
+            </p>
+            <Button onClick={handleQuickAdd} size="lg" className="min-w-[120px]">
               <Plus className="mr-2 h-5 w-5" /> Add to Cart
             </Button>
           </div>

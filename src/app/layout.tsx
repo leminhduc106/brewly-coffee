@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { Toaster } from "@/components/ui/toaster";
 import { CartProvider } from "@/context/cart-context";
 import { FavoritesProvider } from "@/context/favorites-context";
@@ -48,6 +49,7 @@ export default function RootLayout({
             <FavoritesProvider>
               <Header />
               <main>{children}</main>
+              <Footer />
               <CartDrawer />
               <Toaster />
             </FavoritesProvider>

@@ -1,61 +1,79 @@
 
 'use client';
 
-import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import Image from 'next/image';
+import { useEffect, useRef } from 'react';
 import type { ProductOrigin } from '@/lib/types';
+import 'leaflet/dist/leaflet.css';
 
 interface JourneyMapProps {
-    origins: ProductOrigin[];
+  origins: ProductOrigin[];
 }
 
 export default function JourneyMap({ origins }: JourneyMapProps) {
-    useEffect(() => {
-        (async () => {
-          const L = (await import('leaflet')).default;
-          // Fix for default marker icon
-          delete (L.Icon.Default.prototype as any)._getIconUrl;
-    
-          L.Icon.Default.mergeOptions({
-            iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
-            iconUrl: require('leaflet/dist/images/marker-icon.png'),
-            shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
-          });
-        })();
-      }, []);
+  const mapDivRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<any>(null);
+
+  useEffect(() => {
+    let disposed = false;
+    (async () => {
+      if (!mapDivRef.current) return;
+      if (mapInstanceRef.current) return;
+      const L = (await import('leaflet')).default;
+
+      // Patch marker icons once
+      try {
+        const anyIcon: any = L.Icon.Default.prototype;
+        delete anyIcon._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
+          iconUrl: require('leaflet/dist/images/marker-icon.png'),
+          shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+        });
+      } catch {}
+
+      const map = L.map(mapDivRef.current, {
+        center: [10, 0],
+        zoom: 2,
+        scrollWheelZoom: false,
+        worldCopyJump: true,
+      });
+      mapInstanceRef.current = map;
+
+      L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        {
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        }
+      ).addTo(map);
+
+      origins.forEach((origin) => {
+        const marker = L.marker([origin.lat, origin.lng]).addTo(map);
+        const safeStory = origin.story.replace(/</g, '&lt;');
+        marker.bindPopup(
+          `<div style="max-width:220px">` +
+            `<strong>${origin.country}</strong><br/>` +
+            `<small>${safeStory}</small>` +
+          `</div>`
+        );
+      });
+    })();
+    return () => {
+      disposed = true;
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+        } catch {}
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [origins]);
 
   return (
-    <MapContainer
-      center={[10, 0]}
-      zoom={2}
-      scrollWheelZoom={false}
-      style={{ height: '600px', width: '100%', zIndex: 0 }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-      />
-      {origins.map(origin => (
-        <Marker key={origin.country} position={[origin.lat, origin.lng]}>
-          <Popup>
-            <div className="w-64">
-               <Image
-                src={origin.farmImageUrl}
-                alt={`Farm in ${origin.country}`}
-                width={256}
-                height={120}
-                className="rounded-t-lg object-cover"
-                data-ai-hint="coffee farm"
-              />
-              <div className="p-2">
-                <h3 className="font-bold text-base mb-1">{origin.country}</h3>
-                <p className="text-xs text-gray-600">{origin.story}</p>
-              </div>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
-    </MapContainer>
+    <div
+      ref={mapDivRef}
+      style={{ height: '600px', width: '100%', borderRadius: '0.75rem', overflow: 'hidden' }}
+      className="journey-map"
+    />
   );
 }

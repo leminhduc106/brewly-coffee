@@ -1,8 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { useCart } from "@/context/cart-context";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -26,10 +28,30 @@ export function CartDrawer() {
     clearCart,
   } = useCart();
   const router = useRouter();
+  const [editingQuantity, setEditingQuantity] = useState<string | null>(null);
 
   const handleCheckout = () => {
     setIsOpen(false);
     router.push("/checkout");
+  };
+
+  const handleQuantityInputChange = (cartId: string, value: string) => {
+    // Allow empty string while typing
+    if (value === '') return;
+    
+    const quantity = parseInt(value);
+    if (!isNaN(quantity) && quantity > 0 && quantity <= 99) {
+      updateQuantity(cartId, quantity);
+    }
+  };
+
+  const handleQuantityInputBlur = (cartId: string, value: string) => {
+    // If empty or invalid, reset to 1
+    const quantity = parseInt(value);
+    if (isNaN(quantity) || quantity < 1) {
+      updateQuantity(cartId, 1);
+    }
+    setEditingQuantity(null);
   };
 
   return (
@@ -82,9 +104,31 @@ export function CartDrawer() {
                         >
                           <Minus className="h-4 w-4" />
                         </Button>
-                        <span className="w-8 text-center text-sm font-medium tabular-nums">
-                          {item.quantity}
-                        </span>
+                        {editingQuantity === item.cartId ? (
+                          <Input
+                            type="number"
+                            min="1"
+                            max="99"
+                            defaultValue={item.quantity.toString()}
+                            className="w-12 h-8 text-center text-sm border-0 p-0 font-medium tabular-nums"
+                            onChange={(e) => handleQuantityInputChange(item.cartId, e.target.value)}
+                            onBlur={(e) => handleQuantityInputBlur(item.cartId, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.currentTarget.blur();
+                              }
+                            }}
+                            autoFocus
+                            onFocus={(e) => e.target.select()}
+                          />
+                        ) : (
+                          <button
+                            className="w-8 h-8 text-center text-sm font-medium tabular-nums hover:bg-muted rounded-sm transition-colors"
+                            onClick={() => setEditingQuantity(item.cartId)}
+                          >
+                            {item.quantity}
+                          </button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"

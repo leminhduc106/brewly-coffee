@@ -18,7 +18,7 @@ import { Recommendations } from "@/components/recommendations";
 import { ReferralSystem } from "@/components/referral-system";
 import { BirthdayBanner } from "@/components/birthday-banner";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, MapPin, Gift, Clock } from "lucide-react";
+import { ArrowRight, MapPin, Gift, Clock, Crown, Users } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/context/auth-context";
 import { useFavorites } from "@/context/favorites-context";
@@ -184,6 +184,23 @@ export default function Home() {
                 Visit Our Embassy
               </a>
             </Button>
+            {/* Staff Access Link */}
+            {userProfile?.role && ['staff', 'manager', 'admin'].includes(userProfile.role) && (
+              <Button 
+                size="lg" 
+                className="text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg" 
+                asChild
+              >
+                <Link href="/staff" className="flex items-center gap-2">
+                  {userProfile.role === 'manager' || userProfile.role === 'admin' ? (
+                    <Crown className="h-5 w-5" />
+                  ) : (
+                    <Users className="h-5 w-5" />
+                  )}
+                  Staff Dashboard
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
       </section>

@@ -27,20 +27,14 @@ import {
   Truck,
 } from "lucide-react";
 import type { CartItem, DeliveryAddress } from "@/lib/types";
-import { sampleUser } from "@/lib/data";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  addDoc,
-  Timestamp,
-  getDocs,
-  query,
-  where,
-} from "firebase/firestore";
+import { sampleUser, stores } from "@/lib/data";
+import { Timestamp } from "firebase/firestore";
+import { createOrder } from "@/lib/order-service";
+import { createStaffOrder, canPlaceStaffOrders, getStaffOrderOptions } from "@/lib/staff-ordering";
 
 // Type definitions for checkout steps and payment methods
 type CheckoutStep = "review" | "delivery" | "payment" | "confirmation";
-type PaymentMethod = "cash" | "qr" | "points";
+type PaymentMethod = "cash" | "qr" | "points" | "comp";
 
 // Simple loyalty points calculation: 1 point per 1000 VND spent
 function calculateLoyaltyPoints(orderTotal: number): { loyaltyPoints: number } {
@@ -60,21 +54,43 @@ export default function CheckoutPage() {
   const [deliveryAddress, setDeliveryAddress] =
     useState<DeliveryAddress | null>(null);
   const [deliveryFee, setDeliveryFee] = useState(0);
-
   const { cart, cartTotal, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
+  // Store selection (allow user to choose location) - default: staff's store or first store
+  const [selectedStoreId, setSelectedStoreId] = useState<string>(() => {
+    return userProfile?.storeId || stores[0]?.id || 'embassy-hcm';
+  });
   const router = useRouter();
   const { toast } = useToast();
+  
+  // Check if user is staff
+  const isStaff = userProfile && canPlaceStaffOrders(userProfile);
+  const staffOrderOptions = isStaff ? getStaffOrderOptions() : null;
 
   // Calculate final total including delivery fee
   const finalTotal = cartTotal + deliveryFee;
 
+  // Ensure selected store updates if user profile loads later (e.g., after async auth)
+  useEffect(() => {
+    if (userProfile?.storeId && userProfile.storeId !== selectedStoreId) {
+      setSelectedStoreId(userProfile.storeId);
+    }
+  }, [userProfile?.storeId]);
+
   const handlePlaceOrder = async () => {
+    if (!selectedStoreId) {
+      toast({
+        variant: "destructive",
+        title: "Chưa chọn cửa hàng / Store Required",
+        description: "Vui lòng chọn cửa hàng trước khi đặt. / Please select a store before ordering.",
+      });
+      return;
+    }
     if (!user) {
       toast({
         variant: "destructive",
-        title: "Authentication Error",
-        description: "You must be signed in to place an order.",
+        title: "Cần đăng nhập / Authentication Required",
+        description: "Bạn cần đăng nhập để đặt hàng. / You must be signed in to place an order.",
       });
       router.push("/login");
       return;
@@ -83,8 +99,8 @@ export default function CheckoutPage() {
     if (!user.uid) {
       toast({
         variant: "destructive",
-        title: "Authentication Error",
-        description: "Invalid user session. Please log in again.",
+        title: "Phiên đăng nhập hết hạn / Session Expired",
+        description: "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại. / Invalid user session. Please log in again.",
       });
       router.push("/login");
       return;
@@ -95,8 +111,8 @@ export default function CheckoutPage() {
       if (!deliveryAddress) {
         toast({
           variant: "destructive",
-          title: "Delivery Address Required",
-          description: "Please provide delivery address for home delivery.",
+          title: "Cần địa chỉ giao hàng / Delivery Address Required",
+          description: "Vui lòng cung cấp địa chỉ giao hàng tận nơi. / Please provide delivery address for home delivery.",
         });
         return;
       }
@@ -112,8 +128,8 @@ export default function CheckoutPage() {
       ) {
         toast({
           variant: "destructive",
-          title: "Incomplete Address",
-          description: "Please complete all required delivery address fields.",
+          title: "Thông tin địa chỉ thiếu / Incomplete Address", 
+          description: "Vui lòng điền đầy đủ thông tin địa chỉ giao hàng. / Please complete all required delivery address fields.",
         });
         return;
       }
@@ -135,6 +151,7 @@ export default function CheckoutPage() {
         paymentMethod: PaymentMethod;
         createdAt: string;
         status: string;
+        storeId: string;
         pointsUsed?: number;
       } = {
         userId: user.uid,
@@ -145,7 +162,8 @@ export default function CheckoutPage() {
         deliveryOption: deliveryOption,
         paymentMethod,
         createdAt: Timestamp.now().toDate().toISOString(),
-        status: "completed",
+        status: "pending", // Start with pending for staff to confirm
+  storeId: selectedStoreId,
       };
 
       // Add delivery address if delivery option is selected
@@ -164,8 +182,8 @@ export default function CheckoutPage() {
         if (userPoints < pointsCost) {
           toast({
             variant: "destructive",
-            title: "Insufficient Points",
-            description: "You do not have enough points to pay for this order.",
+            title: "Điểm thưởng không đủ / Insufficient Points",
+            description: "Bạn không có đủ điểm để thanh toán đơn hàng này. / You do not have enough points to pay for this order.",
           });
           setIsLoading(false);
           return;
@@ -176,9 +194,68 @@ export default function CheckoutPage() {
         orderData.pointsUsed = pointsCost;
       }
 
-      // Save order to Firestore
-      const orderDoc = await addDoc(collection(db, "orders"), orderData);
-      setOrderId(orderDoc.id);
+      // Save order to Firestore - use staff ordering if user is staff or comp payment
+      let orderId: string;
+      
+      if (paymentMethod === "comp") {
+        // Comp payments require staff privileges
+        if (!isStaff || !userProfile) {
+          toast({
+            variant: "destructive",
+            title: "Không có quyền / Access Denied",
+            description: "Đơn hàng miễn phí chỉ dành cho nhân viên. / Complimentary orders are only available to staff members.",
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Use staff ordering system for comp orders
+        orderId = await createStaffOrder(userProfile, {
+          items: orderData.items,
+          subtotal: orderData.subtotal,
+          deliveryFee: orderData.deliveryFee,
+          total: orderData.total,
+          paymentMethod: orderData.paymentMethod,
+          deliveryOption: orderData.deliveryOption,
+          deliveryAddress: orderData.deliveryAddress,
+          pointsUsed: orderData.pointsUsed,
+          specialInstructions: `Comp order by ${userProfile.name}`,
+          customerNote: `Complimentary order - ${userProfile.role}: ${userProfile.name}`,
+          isStaffOrder: true
+        });
+      } else if (isStaff && userProfile) {
+        // Regular staff orders (paid)
+        orderId = await createStaffOrder(userProfile, {
+          items: orderData.items,
+          subtotal: orderData.subtotal,
+          deliveryFee: orderData.deliveryFee,
+          total: orderData.total,
+          paymentMethod: orderData.paymentMethod as "cash" | "qr" | "points",
+          deliveryOption: orderData.deliveryOption,
+          deliveryAddress: orderData.deliveryAddress,
+          pointsUsed: orderData.pointsUsed,
+          specialInstructions: `Staff order by ${userProfile.name}`,
+          customerNote: `Staff order - ${userProfile.role}: ${userProfile.name}`,
+          isStaffOrder: true
+        });
+      } else {
+        // Use regular customer ordering
+        orderId = await createOrder({
+          userId: orderData.userId,
+          items: orderData.items,
+          subtotal: orderData.subtotal,
+          deliveryFee: orderData.deliveryFee,
+          total: orderData.total,
+          paymentMethod: orderData.paymentMethod as "cash" | "qr" | "points",
+          deliveryOption: orderData.deliveryOption,
+          storeId: orderData.storeId,
+          deliveryAddress: orderData.deliveryAddress,
+          pointsUsed: orderData.pointsUsed,
+          specialInstructions: "Customer order from web app"
+        });
+      }
+      
+      setOrderId(orderId);
 
       // Calculate loyalty points (for earning new points)
       const pointsResult = calculateLoyaltyPoints(finalTotal);
@@ -187,11 +264,13 @@ export default function CheckoutPage() {
       // For now, we'll just show the points earned in the success message
 
       toast({
-        title: "Order Placed Successfully!",
+        title: "Đặt hàng thành công! / Order Placed Successfully!",
         description:
           paymentMethod === "points"
-            ? `You used ${orderData.pointsUsed} points.`
-            : `You've earned ${pointsResult.loyaltyPoints} loyalty points.`,
+            ? `Bạn đã sử dụng ${orderData.pointsUsed} điểm. / You used ${orderData.pointsUsed} points.`
+            : paymentMethod === "comp"
+            ? `Đơn hàng miễn phí đã được tạo. / Complimentary order has been created.`
+            : `Bạn đã nhận ${pointsResult.loyaltyPoints} điểm thưởng. / You've earned ${pointsResult.loyaltyPoints} loyalty points.`,
       });
 
       // Store payment method, delivery option and userId in localStorage for confirmation step
@@ -206,10 +285,10 @@ export default function CheckoutPage() {
     } catch (error) {
       console.error("Failed to place order:", error);
       toast({
-        variant: "destructive",
-        title: "Order Failed",
+        variant: "destructive", 
+        title: "Đặt hàng thất bại / Order Failed",
         description:
-          "There was a problem placing your order. Please try again.",
+          "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại. / There was a problem placing your order. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -241,6 +320,7 @@ export default function CheckoutPage() {
             subtotal={cartTotal}
             deliveryFee={deliveryFee}
             deliveryOption={deliveryOption}
+            isStaff={isStaff || false}
           />
         );
       case "confirmation":
@@ -251,9 +331,17 @@ export default function CheckoutPage() {
   return (
     <div className="container mx-auto max-w-4xl px-4 py-16 md:px-6 md:py-24">
       <div className="text-center mb-12">
-        <h1 className="font-headline text-5xl md:text-7xl text-primary">
-          Checkout
-        </h1>
+        <div className="flex items-center justify-center gap-4 mb-4">
+          <h1 className="font-headline text-5xl md:text-7xl text-primary">
+            Checkout
+          </h1>
+          {isStaff && (
+            <div className="bg-amber-100 border border-amber-300 rounded-full px-4 py-2 flex items-center gap-2">
+              <div className="h-3 w-3 bg-amber-500 rounded-full"></div>
+              <span className="text-amber-800 font-medium text-sm">Staff Order</span>
+            </div>
+          )}
+        </div>
         <p className="mt-4 text-lg text-muted-foreground">
           {step === "confirmation"
             ? "Thank you for your order!"
@@ -269,6 +357,30 @@ export default function CheckoutPage() {
 
       <Card className="shadow-2xl rounded-3xl">
         <CardContent className="p-8">
+          {/* Store Selection */}
+          {step === 'review' && (
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold mb-3 flex items-center gap-2">
+                <Store className="h-5 w-5 text-primary" /> Chọn cửa hàng / Select Store
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {stores.map(s => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setSelectedStoreId(s.id)}
+                    className={`border rounded-lg p-4 text-left transition ${selectedStoreId === s.id ? 'border-primary ring-2 ring-primary/30 bg-primary/5' : 'hover:border-primary/50'}`}
+                  >
+                    <div className="font-medium">{s.name}</div>
+                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.address}</div>
+                    {selectedStoreId === s.id && (
+                      <div className="mt-2 inline-block text-xs px-2 py-0.5 bg-primary text-white rounded">Selected</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {renderStep()}
 
           <Separator className="my-8" />
@@ -426,6 +538,7 @@ const PaymentStep = ({
   subtotal,
   deliveryFee,
   deliveryOption,
+  isStaff,
 }: {
   paymentMethod: PaymentMethod;
   setPaymentMethod: (method: PaymentMethod) => void;
@@ -434,6 +547,7 @@ const PaymentStep = ({
   subtotal: number;
   deliveryFee: number;
   deliveryOption: "pickup" | "delivery";
+  isStaff?: boolean;
 }) => {
   const pointsCost = Math.round(orderTotal / 100); // 1 point per 100 VND
   const canPayWithPoints = userPoints >= pointsCost;
@@ -525,6 +639,27 @@ const PaymentStep = ({
             </p>
           </div>
         </Label>
+
+        {/* Staff-only comp payment option */}
+        {isStaff && (
+          <Label
+            htmlFor="comp"
+            className="flex items-center gap-4 p-4 border rounded-2xl cursor-pointer hover:bg-muted/50 has-[:checked]:bg-primary/10 has-[:checked]:border-primary bg-amber-50 border-amber-200"
+          >
+            <RadioGroupItem value="comp" id="comp" />
+            <div className="h-8 w-8 bg-amber-500 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-sm">S</span>
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-lg text-amber-800">
+                Complimentary Order
+              </p>
+              <p className="text-sm text-amber-700">
+                Staff comp order - no payment required.
+              </p>
+            </div>
+          </Label>
+        )}
       </RadioGroup>
     </div>
   );

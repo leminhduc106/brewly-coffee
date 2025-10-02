@@ -3,7 +3,6 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import {
-  getAuth,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -12,7 +11,7 @@ import {
   signOut,
   User as FirebaseUser,
 } from "firebase/auth";
-import { app } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 
 import { getUserProfile } from "@/lib/user-service";
 import type { User } from "@/lib/types";
@@ -40,20 +39,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const auth = getAuth(app);
+  // use centralized auth instance
 
   useEffect(() => {
+    let isMounted = true; // Track if component is still mounted
+    
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!isMounted) return; // Prevent state updates if unmounted
+      
       setUser(firebaseUser);
-      setLoading(false);
       if (firebaseUser) {
-        const profile = await getUserProfile(firebaseUser.uid);
-        setUserProfile(profile);
+        try {
+          // Fix bootstrap admin role regression first
+          const { ensureBootstrapAdminRole } = await import('@/lib/bootstrap-fix');
+          await ensureBootstrapAdminRole();
+          
+          const profile = await getUserProfile(firebaseUser.uid);
+          if (isMounted) { // Check again after async operation
+            console.log("User profile loaded:", profile?.role); // Debug log
+            setUserProfile(profile);
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          if (isMounted) {
+            setUserProfile(null);
+          }
+        }
       } else {
         setUserProfile(null);
       }
+      
+      if (isMounted) {
+        setLoading(false); // Set loading to false AFTER profile is loaded/cleared
+      }
     });
-    return () => unsubscribe();
+    
+    return () => {
+      isMounted = false; // Mark as unmounted
+      unsubscribe();
+    };
   }, [auth]);
 
   const refreshUserProfile = useCallback(async () => {
@@ -76,8 +100,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } catch (error) {
         console.error("Error creating user profile:", error);
       }
+      // Immediately sign the user out so they must explicitly sign in (prevents auto-login after signup)
+      try {
+        await signOut(auth);
+      } catch (e) {
+        console.warn("Sign out after signup failed (non-fatal)", e);
+      }
     }
-    return result;
+    return { user: result.user, requiresLogin: true };
   };
   
   const signIn = (email: string, password: string) =>

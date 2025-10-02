@@ -86,11 +86,37 @@ export interface Order {
   deliveryFee: number; // Phí giao hàng
   deliveryOption: "pickup" | "delivery"; // Nhận tại quầy hoặc giao hàng
   deliveryAddress?: DeliveryAddress; // Required if deliveryOption is "delivery"
-  paymentMethod: "cash" | "qr" | "points";
+  paymentMethod: "cash" | "qr" | "points" | "comp";
   createdAt: string;
-  status: "pending" | "preparing" | "ready" | "completed" | "cancelled";
+  status: "pending" | "confirmed" | "preparing" | "ready" | "completed" | "cancelled";
   feedback?: string; // User's written feedback
   rating?: number; // User's rating (1-5 stars)
+  // Staff management fields
+  assignedTo?: string; // Staff member handling the order
+  estimatedTime?: number; // Estimated preparation time in minutes
+  statusHistory?: OrderStatusUpdate[]; // Track status changes
+  specialInstructions?: string; // Staff notes
+  storeId?: string; // Which embassy location
+}
+
+export interface OrderStatusUpdate {
+  status: Order['status'];
+  timestamp: string;
+  updatedBy: string; // Staff member who updated
+  notes?: string;
+}
+
+// Staff dashboard specific types
+export interface StaffMember {
+  uid: string;
+  name: string;
+  email: string;
+  role: "staff" | "manager";
+  storeId: string;
+  employeeId: string;
+  avatar?: string;
+  isOnline: boolean;
+  currentOrders: string[]; // Order IDs currently assigned
 }
 
 export interface User {
@@ -103,5 +129,9 @@ export interface User {
   referralCode?: string;
   referredBy?: string;
   birthday?: string; // ISO string format (YYYY-MM-DD)
-  role?: "user" | "admin"; // For RBAC
+  role: "customer" | "staff" | "manager" | "admin"; // Role-based access control
+  storeId?: string; // Which embassy location they work at
+  permissions?: string[]; // Specific permissions
+  employeeId?: string; // Staff identification number
+  hireDate?: string; // When they joined the team
 }

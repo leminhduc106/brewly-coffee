@@ -13,21 +13,74 @@ export const createUserProfile = async (uid: string, userData: Partial<User>) =>
   try {
     const userRef = doc(db, 'users', uid);
     
+    // Check if user already exists to preserve their role
+    const existingUser = await getDoc(userRef);
+    const existingRole = existingUser.exists() ? existingUser.data()?.role : null;
+    
     // Generate referral code if not provided
     const referralCode = userData.referralCode || generateReferralCode(uid);
     
+    // Only set default role if user doesn't exist or has no role
+    const roleToSet = existingRole || userData.role || 'customer';
+    
     await setDoc(userRef, {
-      uid,
-      loyaltyPoints: 0,
-      tier: 'Silver',
-      referralCode,
       ...userData,
+      uid,
+      loyaltyPoints: existingUser.exists() ? existingUser.data()?.loyaltyPoints ?? 0 : 0,
+      tier: existingUser.exists() ? existingUser.data()?.tier ?? 'Silver' : 'Silver',
+      role: roleToSet, // Preserve existing role or use provided/default
+      referralCode,
     }, { merge: true });
+    
+    // Only attempt bootstrap if this is a completely new user
+    if (!existingUser.exists()) {
+      await maybeBootstrapFirstAdmin(uid);
+    }
   } catch (error) {
     console.error('Error creating user profile:', error);
     throw error;
   }
 };
+
+// Explicit staff/manager profile creator (must be called ONLY from secure server/admin context)
+export const createStaffProfile = async (uid: string, staffData: Partial<User> & { role: 'staff' | 'manager' | 'admin'; storeId?: string }) => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await setDoc(userRef, {
+      ...staffData,
+      uid,
+      loyaltyPoints: staffData.loyaltyPoints ?? 0,
+      tier: staffData.tier ?? 'Silver',
+      employeeId: staffData.employeeId || `EMP${Date.now().toString().slice(-6)}`,
+      hireDate: staffData.hireDate || new Date().toISOString().split('T')[0],
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error creating staff profile:', error);
+    throw error;
+  }
+};
+
+// Bootstrap: promote the very first created user to admin automatically
+let bootstrapChecked = false;
+async function maybeBootstrapFirstAdmin(currentUid: string) {
+  if (bootstrapChecked) return; // avoid repeat
+  bootstrapChecked = true;
+  try {
+    // Count how many user docs exist quickly by trying to get a known marker doc.
+    // Simpler: create a special doc 'meta/bootstrap' once.
+    const metaRef = doc(db, 'meta', 'bootstrap');
+    const metaSnap = await getDoc(metaRef);
+    if (metaSnap.exists()) return; // already bootstrapped
+    // Elevate this user to admin BEFORE creating bootstrap marker (rules allow this only once)
+    const userRef = doc(db, 'users', currentUid);
+    await updateDoc(userRef, { role: 'admin' });
+    // Now mark bootstrap done
+    await setDoc(metaRef, { firstAdmin: currentUid, createdAt: new Date().toISOString() });
+    console.info('Bootstrap: promoted first user to admin:', currentUid);
+  } catch (e) {
+    console.warn('Bootstrap admin check failed (non-fatal):', e);
+  }
+}
 
 export const getUserProfile = async (uid: string): Promise<User | null> => {
   try {

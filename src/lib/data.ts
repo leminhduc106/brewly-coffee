@@ -435,7 +435,8 @@ export const allProducts: Product[] = [
 
 export const stores: Store[] = [
   {
-    id: "1",
+    // Using slug IDs consistent across ordering, staff dashboards, and docs
+    id: "embassy-hcm",
     name: "AMBASSADOR's COFFEE - Embassy District",
     address: "45 Hai Bà Trưng, Quận 1, Thành phố Hồ Chí Minh, Vietnam",
     lat: 10.7769,
@@ -455,7 +456,7 @@ export const stores: Store[] = [
     ],
   },
   {
-    id: "2",
+    id: "embassy-hanoi",
     name: "AMBASSADOR's COFFEE - Cultural Quarter",
     address: "78 Đống Đa, Quận Hai Bà Trưng, Hà Nội, Vietnam",
     lat: 21.0285,
@@ -475,7 +476,7 @@ export const stores: Store[] = [
     ],
   },
   {
-    id: "3",
+    id: "embassy-hcm-q5",
     name: "AMBASSADOR's COFFEE - Diplomatic Haven",
     address: "156 Trần Hưng Đạo, Quận 5, Thành phố Hồ Chí Minh, Vietnam",
     lat: 10.7575,
@@ -503,7 +504,11 @@ export const sampleUser: User = {
   avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d",
   loyaltyPoints: 1250,
   tier: "Gold",
+  role: "customer",
 };
+
+// Sample staff users are now created via /staff-signup form
+// No need for hardcoded test data
 
 export const pastOrders: Order[] = [
   {
@@ -528,6 +533,7 @@ export const pastOrders: Order[] = [
     status: "completed",
     feedback: "Great service and delicious coffee!",
     rating: 5,
+    storeId: "embassy-hcm",
   },
   {
     id: "order002",
@@ -542,6 +548,7 @@ export const pastOrders: Order[] = [
     status: "completed",
     feedback: "",
     rating: 0,
+    storeId: "embassy-hcm",
   },
   {
     id: "order003",
@@ -562,6 +569,7 @@ export const pastOrders: Order[] = [
     paymentMethod: "points",
     createdAt: "2023-10-15T09:15:00Z",
     status: "preparing",
+    storeId: "embassy-hcm",
   },
   {
     id: "order004",
@@ -574,5 +582,6 @@ export const pastOrders: Order[] = [
     paymentMethod: "cash",
     createdAt: "2023-10-28T16:45:00Z",
     status: "ready",
+    storeId: "embassy-hcm",
   },
 ];

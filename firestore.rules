@@ -1,0 +1,78 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function bootstrapNotCompleted() {
+      return !exists(/databases/$(database)/documents/meta/bootstrap);
+    }
+    // Users can read/write their own profile
+    match /users/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isManagerOrAdmin(request.auth.uid));
+      allow create: if request.auth != null && request.auth.uid == userId; // user can create own doc
+      // Updates: user can update own non-privileged fields but NOT elevate role / store / employeeId / permissions
+      allow update: if request.auth != null && request.auth.uid == userId &&
+        resource.data.role == request.resource.data.role && // role unchanged
+        resource.data.storeId == request.resource.data.storeId && // cannot self-assign store
+        resource.data.employeeId == request.resource.data.employeeId &&
+        resource.data.permissions == request.resource.data.permissions;
+      // Bootstrap: allow the very first user to elevate themselves to admin exactly once (before meta/bootstrap exists)
+      allow update: if request.auth != null && request.auth.uid == userId && bootstrapNotCompleted() &&
+        resource.data.role == 'customer' &&
+        request.resource.data.role == 'admin';
+      // Managers/Admins can update anything (including role changes)
+      allow update, delete: if request.auth != null && isManagerOrAdmin(request.auth.uid);
+    }
+    // Allow creating bootstrap meta doc only once by first authenticated user
+    match /meta/{docId} {
+      allow create: if request.auth != null && docId == 'bootstrap';
+      allow read: if request.auth != null && docId == 'bootstrap';
+      // No updates/deletes needed after creation (lock it down)
+    }
+    
+    // Orders - simplified rules for staff operations
+    match /orders/{orderId} {
+      // Allow authenticated users to read orders
+      allow read: if request.auth != null;
+      
+      // Allow authenticated users to create orders
+      allow create: if request.auth != null;
+      
+      // Allow staff, manager, admin to update any order
+      allow update: if request.auth != null && isStaff(request.auth.uid);
+      
+      // Allow order owner to update their own order
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    // Staff Access Requests
+    match /staffAccessRequests/{requestId} {
+      // User can create & get ONLY their own document
+      allow create, get: if request.auth != null && request.auth.uid == requestId;
+      // Managers/admins can list (query), get, update (approve/reject), delete
+      allow list, get, update, delete: if request.auth != null && isManagerOrAdmin(request.auth.uid);
+      // Prevent regular users from querying the whole collection
+    }
+    
+    // Helper functions
+    function isStaffAtStore(uid, storeId) {
+      return exists(/databases/$(database)/documents/users/$(uid)) &&
+        get(/databases/$(database)/documents/users/$(uid)).data.role in ['staff', 'manager', 'admin'] &&
+        (get(/databases/$(database)/documents/users/$(uid)).data.storeId == storeId ||
+         get(/databases/$(database)/documents/users/$(uid)).data.role == 'admin');
+    }
+    
+    function isStaff(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid)) &&
+        get(/databases/$(database)/documents/users/$(uid)).data.role in ['staff', 'manager', 'admin'];
+    }
+    
+    function isManagerOrAdmin(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid)) &&
+        get(/databases/$(database)/documents/users/$(uid)).data.role in ['manager', 'admin'];
+    }
+    
+    function isAdmin(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid)) &&
+        get(/databases/$(database)/documents/users/$(uid)).data.role == 'admin';
+    }
+  }
+}
