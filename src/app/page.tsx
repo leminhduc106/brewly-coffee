@@ -11,7 +11,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { featuredProducts, stores, pastOrders, sampleUser } from "@/lib/data";
+import { featuredProducts, stores } from "@/lib/data";
 import { ProductCard } from "@/components/product-card";
 import { LoyaltyPointsCalculator } from "@/components/loyalty-points-calculator";
 import { Recommendations } from "@/components/recommendations";
@@ -72,8 +72,8 @@ export default function Home() {
         setOrderHistory(orders);
       } catch (error) {
         console.error("Error loading order history:", error);
-        // Fallback to sample data if Firebase fails
-        setOrderHistory(pastOrders);
+        // Show empty history if Firebase fails
+        setOrderHistory([]);
       } finally {
         setIsLoadingOrders(false);
       }
@@ -525,57 +525,70 @@ export default function Home() {
             </h2>
             <Card className="overflow-hidden shadow-2xl rounded-3xl w-full">
               <CardHeader className="flex flex-row items-center justify-between bg-muted/30 p-6">
-                <div className="flex items-center gap-4">
-                  <Image
-                    src={userProfile?.avatar || sampleUser.avatar}
-                    alt="User avatar"
-                    width={64}
-                    height={64}
-                    className="rounded-full border-4 border-primary/50"
-                  />
-                  <div>
-                    <CardTitle className="font-body text-2xl font-bold">
-                      {userProfile?.name || sampleUser.name}
+                {userProfile ? (
+                  <>
+                    <div className="flex items-center gap-4">
+                      <Image
+                        src={userProfile.avatar}
+                        alt="User avatar"
+                        width={64}
+                        height={64}
+                        className="rounded-full border-4 border-primary/50"
+                      />
+                      <div>
+                        <CardTitle className="font-body text-2xl font-bold">
+                          {userProfile.name}
+                        </CardTitle>
+                        <p className="text-base text-muted-foreground">
+                          {userProfile.email}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant="default"
+                      className="text-lg shadow-lg bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+                    >
+                      {userProfile.tier}
+                    </Badge>
+                  </>
+                ) : (
+                  <div className="w-full text-center">
+                    <CardTitle className="font-body text-2xl font-bold mb-2">
+                      Welcome to AMBASSADOR's COFFEE
                     </CardTitle>
-                    <p className="text-base text-muted-foreground">
-                      {userProfile?.email || sampleUser.email}
+                    <p className="text-muted-foreground">
+                      Sign in to earn loyalty points and unlock rewards
                     </p>
                   </div>
-                </div>
-                <Badge
-                  variant="default"
-                  className="text-lg shadow-lg bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                >
-                  {userProfile?.tier || sampleUser.tier}
-                </Badge>
+                )}
               </CardHeader>
               <CardContent className="p-8 grid gap-8">
-                <div>
-                  <div className="flex justify-between items-end mb-2">
-                    <p className="text-base font-medium">Your Points</p>
-                    <p className="font-bold text-primary text-xl">
-                      {(
-                        userProfile?.loyaltyPoints || sampleUser.loyaltyPoints
-                      ).toLocaleString()}{" "}
-                      / 2,000
+                {userProfile ? (
+                  <div>
+                    <div className="flex justify-between items-end mb-2">
+                      <p className="text-base font-medium">Your Points</p>
+                      <p className="font-bold text-primary text-xl">
+                        {userProfile.loyaltyPoints.toLocaleString()} / 2,000
+                      </p>
+                    </div>
+                    <Progress
+                      value={(userProfile.loyaltyPoints / 2000) * 100}
+                      className="h-4"
+                    />
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {2000 - userProfile.loyaltyPoints} points to Platinum Tier
                     </p>
                   </div>
-                  <Progress
-                    value={
-                      ((userProfile?.loyaltyPoints ||
-                        sampleUser.loyaltyPoints) /
-                        2000) *
-                      100
-                    }
-                    className="h-4"
-                  />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {2000 -
-                      (userProfile?.loyaltyPoints ||
-                        sampleUser.loyaltyPoints)}{" "}
-                    points to Platinum Tier
-                  </p>
-                </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">
+                      Sign in to view your loyalty points and rewards
+                    </p>
+                    <Button asChild variant="outline">
+                      <Link href="/login">Sign In</Link>
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </section>

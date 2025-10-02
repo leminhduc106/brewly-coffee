@@ -27,10 +27,11 @@ import {
   Truck,
 } from "lucide-react";
 import type { CartItem, DeliveryAddress } from "@/lib/types";
-import { sampleUser, stores } from "@/lib/data";
+import { stores } from "@/lib/data";
 import { Timestamp } from "firebase/firestore";
 import { createOrder } from "@/lib/order-service";
 import { createStaffOrder, canPlaceStaffOrders, getStaffOrderOptions } from "@/lib/staff-ordering";
+import { updateUserProfile } from "@/lib/user-service";
 
 // Type definitions for checkout steps and payment methods
 type CheckoutStep = "review" | "delivery" | "payment" | "confirmation";
@@ -55,7 +56,7 @@ export default function CheckoutPage() {
     useState<DeliveryAddress | null>(null);
   const [deliveryFee, setDeliveryFee] = useState(0);
   const { cart, cartTotal, clearCart } = useCart();
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refreshUserProfile } = useAuth();
   // Store selection (allow user to choose location) - default: staff's store or first store
   const [selectedStoreId, setSelectedStoreId] = useState<string>(() => {
     return userProfile?.storeId || stores[0]?.id || 'embassy-hcm';
@@ -173,25 +174,45 @@ export default function CheckoutPage() {
 
       // Points payment: check and deduct points
       if (paymentMethod === "points") {
-        // 1 point = 1,000 VND (so 100 points = 100,000 VND)
-        const pointsCost = Math.round(finalTotal / 1000);
-        // For now, use sampleUser data since we don't have real user documents yet
-        // In production, you'd fetch from Firestore user documents
-        const userPoints = sampleUser.loyaltyPoints;
-
-        if (userPoints < pointsCost) {
+        if (!userProfile) {
           toast({
             variant: "destructive",
-            title: "Điểm thưởng không đủ / Insufficient Points",
-            description: "Bạn không có đủ điểm để thanh toán đơn hàng này. / You do not have enough points to pay for this order.",
+            title: "Sign In Required",
+            description: "Please sign in to use loyalty points for payment.",
           });
           setIsLoading(false);
           return;
         }
 
-        // Note: In production, you'd deduct points from the user's Firestore document here
-        // For now, we'll just record that points were used
-        orderData.pointsUsed = pointsCost;
+        // 1 point = 1,000 VND (so 100 points = 100,000 VND)
+        const pointsCost = Math.round(finalTotal / 1000);
+        const userPoints = userProfile.loyaltyPoints;
+
+        if (userPoints < pointsCost) {
+          toast({
+            variant: "destructive",
+            title: "Điểm thưởng không đủ / Insufficient Points",
+            description: `You need ${pointsCost} points but only have ${userPoints} points. You need ${pointsCost - userPoints} more points.`,
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        // Deduct points from user's account
+        try {
+          await updateUserProfile(userProfile.uid, { 
+            loyaltyPoints: userPoints - pointsCost 
+          });
+          orderData.pointsUsed = pointsCost;
+        } catch (error) {
+          toast({
+            variant: "destructive",
+            title: "Payment Failed",
+            description: "Failed to process points payment. Please try again.",
+          });
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Save order to Firestore - use staff ordering if user is staff or comp payment
@@ -257,11 +278,24 @@ export default function CheckoutPage() {
       
       setOrderId(orderId);
 
-      // Calculate loyalty points (for earning new points)
-      const pointsResult = calculateLoyaltyPoints(finalTotal);
-
-      // Note: In production, you'd update user loyalty points in Firestore here
-      // For now, we'll just show the points earned in the success message
+      // Award loyalty points for the order (only if not paid with points and user is logged in)
+      let earnedPoints = 0;
+      if (paymentMethod !== "points" && paymentMethod !== "comp" && userProfile) {
+        const pointsResult = calculateLoyaltyPoints(finalTotal);
+        earnedPoints = pointsResult.loyaltyPoints;
+        const newPointsTotal = userProfile.loyaltyPoints + earnedPoints;
+        
+        try {
+          await updateUserProfile(userProfile.uid, { 
+            loyaltyPoints: newPointsTotal 
+          });
+          
+          // Refresh user profile to show updated points
+          await refreshUserProfile();
+        } catch (error) {
+          console.error("Failed to award loyalty points:", error);
+        }
+      }
 
       toast({
         title: "Đặt hàng thành công! / Order Placed Successfully!",
@@ -270,7 +304,9 @@ export default function CheckoutPage() {
             ? `Bạn đã sử dụng ${orderData.pointsUsed} điểm. / You used ${orderData.pointsUsed} points.`
             : paymentMethod === "comp"
             ? `Đơn hàng miễn phí đã được tạo. / Complimentary order has been created.`
-            : `Bạn đã nhận ${pointsResult.loyaltyPoints} điểm thưởng. / You've earned ${pointsResult.loyaltyPoints} loyalty points.`,
+            : earnedPoints > 0
+            ? `Bạn đã nhận ${earnedPoints} điểm thưởng. / You've earned ${earnedPoints} loyalty points.`
+            : "Order placed successfully!",
       });
 
       // Store payment method, delivery option and userId in localStorage for confirmation step
@@ -315,7 +351,7 @@ export default function CheckoutPage() {
           <PaymentStep
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
-            userPoints={sampleUser.loyaltyPoints}
+            userPoints={userProfile?.loyaltyPoints || 0}
             orderTotal={finalTotal}
             subtotal={cartTotal}
             deliveryFee={deliveryFee}

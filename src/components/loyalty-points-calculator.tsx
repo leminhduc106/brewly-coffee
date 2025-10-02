@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from './ui/card';
 import { Sparkles, Loader2 } from 'lucide-react';
-import { pastOrders, sampleUser } from '@/lib/data';
+// Removed fake data imports - now using real calculations only
 
 const formSchema = z.object({
   orderTotal: z.coerce.number().min(1000, {
@@ -40,12 +40,11 @@ export function LoyaltyPointsCalculator() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     setEarnedPoints(null);
-    // Dummy calculation: 1 point per 1000 VND
-    setTimeout(() => {
-      const points = Math.round(values.orderTotal / 1000);
-      setEarnedPoints(points);
-      setIsLoading(false);
-    }, 1000);
+    
+    // Real calculation: 1 point per 1000 VND
+    const points = Math.round(values.orderTotal / 1000);
+    setEarnedPoints(points);
+    setIsLoading(false);
   }
 
   return (
