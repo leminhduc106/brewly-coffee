@@ -214,16 +214,16 @@ export default function StaffJoinPage() {
             <p className="text-gray-600 mb-6">
               Join hundreds of staff members already using our platform to manage orders efficiently!
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg" className="text-lg px-8">
-                <Link href="/staff-request" className="flex items-center gap-2">
+            <div className="flex flex-col gap-4 justify-center">
+              <Button asChild size="lg" className="text-lg px-8 w-full">
+                <Link href="/staff-request" className="flex items-center justify-center gap-2">
                   <Crown className="h-5 w-5" />
                   Create Staff Account
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="text-lg px-8">
-                <Link href="/login" className="flex items-center gap-2">
-                  Already have an account? Sign In
+              <Button asChild variant="outline" size="lg" className="text-lg px-8 w-full">
+                <Link href="/login" className="flex items-center justify-center gap-2">
+                  Sign In
                   <ExternalLink className="h-4 w-4" />
                 </Link>
               </Button>
