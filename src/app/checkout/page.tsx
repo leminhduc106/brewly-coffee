@@ -13,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { DeliveryAddressForm } from "@/components/delivery-address-form";
+import { GuestInfoForm, type GuestInfo } from "@/components/guest-info-form";
 import {
   CreditCard,
   DollarSign,
@@ -30,8 +31,13 @@ import type { CartItem, DeliveryAddress } from "@/lib/types";
 import { stores } from "@/lib/data";
 import { Timestamp } from "firebase/firestore";
 import { createOrder } from "@/lib/order-service";
-import { createStaffOrder, canPlaceStaffOrders, getStaffOrderOptions } from "@/lib/staff-ordering";
+import {
+  createStaffOrder,
+  canPlaceStaffOrders,
+  getStaffOrderOptions,
+} from "@/lib/staff-ordering";
 import { updateUserProfile } from "@/lib/user-service";
+import { createGuestOrder, validateGuestOrderData } from "@/lib/guest-checkout";
 
 // Type definitions for checkout steps and payment methods
 type CheckoutStep = "review" | "delivery" | "payment" | "confirmation";
@@ -48,6 +54,9 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
 
+  // Guest checkout state
+  const [guestInfo, setGuestInfo] = useState<GuestInfo | null>(null);
+
   // Delivery state
   const [deliveryOption, setDeliveryOption] = useState<"pickup" | "delivery">(
     "pickup"
@@ -59,11 +68,11 @@ export default function CheckoutPage() {
   const { user, userProfile, refreshUserProfile } = useAuth();
   // Store selection (allow user to choose location) - default: staff's store or first store
   const [selectedStoreId, setSelectedStoreId] = useState<string>(() => {
-    return userProfile?.storeId || stores[0]?.id || 'embassy-hcm';
+    return userProfile?.storeId || stores[0]?.id || "embassy-hcm";
   });
   const router = useRouter();
   const { toast } = useToast();
-  
+
   // Check if user is staff
   const isStaff = userProfile && canPlaceStaffOrders(userProfile);
   const staffOrderOptions = isStaff ? getStaffOrderOptions() : null;
@@ -83,25 +92,20 @@ export default function CheckoutPage() {
       toast({
         variant: "destructive",
         title: "Chưa chọn cửa hàng / Store Required",
-        description: "Vui lòng chọn cửa hàng trước khi đặt. / Please select a store before ordering.",
+        description:
+          "Vui lòng chọn cửa hàng trước khi đặt. / Please select a store before ordering.",
       });
-      return;
-    }
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Cần đăng nhập / Authentication Required",
-        description: "Bạn cần đăng nhập để đặt hàng. / You must be signed in to place an order.",
-      });
-      router.push("/login");
       return;
     }
 
-    if (!user.uid) {
+    // Guest checkout allowed for cash/qr payment only
+    // Points/Comp require authentication
+    if (!user && (paymentMethod === "points" || paymentMethod === "comp")) {
       toast({
         variant: "destructive",
-        title: "Phiên đăng nhập hết hạn / Session Expired",
-        description: "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại. / Invalid user session. Please log in again.",
+        title: "Cần đăng nhập / Authentication Required",
+        description:
+          "Thanh toán bằng điểm thưởng hoặc đơn miễn phí yêu cầu tài khoản. / Points or complimentary payment requires an account.",
       });
       router.push("/login");
       return;
@@ -113,7 +117,8 @@ export default function CheckoutPage() {
         toast({
           variant: "destructive",
           title: "Cần địa chỉ giao hàng / Delivery Address Required",
-          description: "Vui lòng cung cấp địa chỉ giao hàng tận nơi. / Please provide delivery address for home delivery.",
+          description:
+            "Vui lòng cung cấp địa chỉ giao hàng tận nơi. / Please provide delivery address for home delivery.",
         });
         return;
       }
@@ -129,8 +134,9 @@ export default function CheckoutPage() {
       ) {
         toast({
           variant: "destructive",
-          title: "Thông tin địa chỉ thiếu / Incomplete Address", 
-          description: "Vui lòng điền đầy đủ thông tin địa chỉ giao hàng. / Please complete all required delivery address fields.",
+          title: "Thông tin địa chỉ thiếu / Incomplete Address",
+          description:
+            "Vui lòng điền đầy đủ thông tin địa chỉ giao hàng. / Please complete all required delivery address fields.",
         });
         return;
       }
@@ -139,6 +145,90 @@ export default function CheckoutPage() {
     setIsLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      // GUEST CHECKOUT PATH
+      if (!user) {
+        // Validate guest info
+        if (!guestInfo) {
+          toast({
+            variant: "destructive",
+            title: "Thông tin thiếu / Missing Information",
+            description:
+              "Vui lòng điền thông tin khách hàng. / Please provide guest information.",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        // Validate guest order data
+        const guestValidation = validateGuestOrderData({
+          guestInfo,
+          items: cart,
+          subtotal: cartTotal,
+          deliveryFee,
+          total: finalTotal,
+          paymentMethod: paymentMethod as "cash" | "qr",
+          deliveryOption,
+          storeId: selectedStoreId,
+          deliveryAddress:
+            deliveryOption === "delivery"
+              ? deliveryAddress || undefined
+              : undefined,
+        });
+
+        if (!guestValidation.isValid) {
+          toast({
+            variant: "destructive",
+            title: "Đặt hàng thất bại / Order Failed",
+            description:
+              guestValidation.errors[0] ||
+              "Please check your information and try again.",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        // Create guest order
+        const guestOrderId = await createGuestOrder({
+          guestInfo,
+          items: cart,
+          subtotal: cartTotal,
+          deliveryFee,
+          total: finalTotal,
+          paymentMethod: paymentMethod as "cash" | "qr",
+          deliveryOption,
+          storeId: selectedStoreId,
+          deliveryAddress:
+            deliveryOption === "delivery"
+              ? deliveryAddress || undefined
+              : undefined,
+        });
+
+        setOrderId(guestOrderId);
+        clearCart();
+        setStep("confirmation");
+
+        toast({
+          title: "✅ Đặt hàng thành công / Order Placed!",
+          description: `Mã đơn hàng: ${guestOrderId}`,
+        });
+
+        setIsLoading(false);
+        return;
+      }
+
+      // AUTHENTICATED USER PATH
+      if (!user.uid) {
+        toast({
+          variant: "destructive",
+          title: "Phiên đăng nhập hết hạn / Session Expired",
+          description:
+            "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại. / Invalid user session. Please log in again.",
+        });
+        router.push("/login");
+        setIsLoading(false);
+        return;
+      }
 
       // Prepare order data with delivery information
       const orderData: {
@@ -164,7 +254,7 @@ export default function CheckoutPage() {
         paymentMethod,
         createdAt: Timestamp.now().toDate().toISOString(),
         status: "pending", // Start with pending for staff to confirm
-  storeId: selectedStoreId,
+        storeId: selectedStoreId,
       };
 
       // Add delivery address if delivery option is selected
@@ -192,7 +282,9 @@ export default function CheckoutPage() {
           toast({
             variant: "destructive",
             title: "Điểm thưởng không đủ / Insufficient Points",
-            description: `You need ${pointsCost} points but only have ${userPoints} points. You need ${pointsCost - userPoints} more points.`,
+            description: `You need ${pointsCost} points but only have ${userPoints} points. You need ${
+              pointsCost - userPoints
+            } more points.`,
           });
           setIsLoading(false);
           return;
@@ -200,8 +292,8 @@ export default function CheckoutPage() {
 
         // Deduct points from user's account
         try {
-          await updateUserProfile(userProfile.uid, { 
-            loyaltyPoints: userPoints - pointsCost 
+          await updateUserProfile(userProfile.uid, {
+            loyaltyPoints: userPoints - pointsCost,
           });
           orderData.pointsUsed = pointsCost;
         } catch (error) {
@@ -217,19 +309,20 @@ export default function CheckoutPage() {
 
       // Save order to Firestore - use staff ordering if user is staff or comp payment
       let orderId: string;
-      
+
       if (paymentMethod === "comp") {
         // Comp payments require staff privileges
         if (!isStaff || !userProfile) {
           toast({
             variant: "destructive",
             title: "Không có quyền / Access Denied",
-            description: "Đơn hàng miễn phí chỉ dành cho nhân viên. / Complimentary orders are only available to staff members.",
+            description:
+              "Đơn hàng miễn phí chỉ dành cho nhân viên. / Complimentary orders are only available to staff members.",
           });
           setIsLoading(false);
           return;
         }
-        
+
         // Use staff ordering system for comp orders
         orderId = await createStaffOrder(userProfile, {
           items: orderData.items,
@@ -242,7 +335,7 @@ export default function CheckoutPage() {
           pointsUsed: orderData.pointsUsed,
           specialInstructions: `Comp order by ${userProfile.name}`,
           customerNote: `Complimentary order - ${userProfile.role}: ${userProfile.name}`,
-          isStaffOrder: true
+          isStaffOrder: true,
         });
       } else if (isStaff && userProfile) {
         // Regular staff orders (paid)
@@ -257,7 +350,7 @@ export default function CheckoutPage() {
           pointsUsed: orderData.pointsUsed,
           specialInstructions: `Staff order by ${userProfile.name}`,
           customerNote: `Staff order - ${userProfile.role}: ${userProfile.name}`,
-          isStaffOrder: true
+          isStaffOrder: true,
         });
       } else {
         // Use regular customer ordering
@@ -272,24 +365,28 @@ export default function CheckoutPage() {
           storeId: orderData.storeId,
           deliveryAddress: orderData.deliveryAddress,
           pointsUsed: orderData.pointsUsed,
-          specialInstructions: "Customer order from web app"
+          specialInstructions: "Customer order from web app",
         });
       }
-      
+
       setOrderId(orderId);
 
       // Award loyalty points for the order (only if not paid with points and user is logged in)
       let earnedPoints = 0;
-      if (paymentMethod !== "points" && paymentMethod !== "comp" && userProfile) {
+      if (
+        paymentMethod !== "points" &&
+        paymentMethod !== "comp" &&
+        userProfile
+      ) {
         const pointsResult = calculateLoyaltyPoints(finalTotal);
         earnedPoints = pointsResult.loyaltyPoints;
         const newPointsTotal = userProfile.loyaltyPoints + earnedPoints;
-        
+
         try {
-          await updateUserProfile(userProfile.uid, { 
-            loyaltyPoints: newPointsTotal 
+          await updateUserProfile(userProfile.uid, {
+            loyaltyPoints: newPointsTotal,
           });
-          
+
           // Refresh user profile to show updated points
           await refreshUserProfile();
         } catch (error) {
@@ -321,7 +418,7 @@ export default function CheckoutPage() {
     } catch (error) {
       console.error("Failed to place order:", error);
       toast({
-        variant: "destructive", 
+        variant: "destructive",
         title: "Đặt hàng thất bại / Order Failed",
         description:
           "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại. / There was a problem placing your order. Please try again.",
@@ -337,14 +434,25 @@ export default function CheckoutPage() {
         return <ReviewStep cart={cart} cartTotal={cartTotal} />;
       case "delivery":
         return (
-          <DeliveryAddressForm
-            deliveryOption={deliveryOption}
-            onDeliveryOptionChange={setDeliveryOption}
-            deliveryAddress={deliveryAddress}
-            onDeliveryAddressChange={setDeliveryAddress}
-            deliveryFee={deliveryFee}
-            onDeliveryFeeChange={setDeliveryFee}
-          />
+          <div className="space-y-6">
+            {/* Guest Info Form - Show only if user is not logged in */}
+            {!user && (
+              <GuestInfoForm
+                onGuestInfoChange={setGuestInfo}
+                initialGuestInfo={guestInfo || undefined}
+              />
+            )}
+
+            {/* Delivery Address Form */}
+            <DeliveryAddressForm
+              deliveryOption={deliveryOption}
+              onDeliveryOptionChange={setDeliveryOption}
+              deliveryAddress={deliveryAddress}
+              onDeliveryAddressChange={setDeliveryAddress}
+              deliveryFee={deliveryFee}
+              onDeliveryFeeChange={setDeliveryFee}
+            />
+          </div>
         );
       case "payment":
         return (
@@ -357,6 +465,7 @@ export default function CheckoutPage() {
             deliveryFee={deliveryFee}
             deliveryOption={deliveryOption}
             isStaff={isStaff || false}
+            isAuthenticated={!!user}
           />
         );
       case "confirmation":
@@ -374,7 +483,9 @@ export default function CheckoutPage() {
           {isStaff && (
             <div className="bg-amber-100 border border-amber-300 rounded-full px-4 py-2 flex items-center gap-2">
               <div className="h-3 w-3 bg-amber-500 rounded-full"></div>
-              <span className="text-amber-800 font-medium text-sm">Staff Order</span>
+              <span className="text-amber-800 font-medium text-sm">
+                Staff Order
+              </span>
             </div>
           )}
         </div>
@@ -394,23 +505,32 @@ export default function CheckoutPage() {
       <Card className="shadow-2xl rounded-3xl">
         <CardContent className="p-8">
           {/* Store Selection */}
-          {step === 'review' && (
+          {step === "review" && (
             <div className="mb-8">
               <h3 className="text-xl font-semibold mb-3 flex items-center gap-2">
-                <Store className="h-5 w-5 text-primary" /> Chọn cửa hàng / Select Store
+                <Store className="h-5 w-5 text-primary" /> Chọn cửa hàng /
+                Select Store
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {stores.map(s => (
+                {stores.map((s) => (
                   <button
                     key={s.id}
                     type="button"
                     onClick={() => setSelectedStoreId(s.id)}
-                    className={`border rounded-lg p-4 text-left transition ${selectedStoreId === s.id ? 'border-primary ring-2 ring-primary/30 bg-primary/5' : 'hover:border-primary/50'}`}
+                    className={`border rounded-lg p-4 text-left transition ${
+                      selectedStoreId === s.id
+                        ? "border-primary ring-2 ring-primary/30 bg-primary/5"
+                        : "hover:border-primary/50"
+                    }`}
                   >
                     <div className="font-medium">{s.name}</div>
-                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.address}</div>
+                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                      {s.address}
+                    </div>
                     {selectedStoreId === s.id && (
-                      <div className="mt-2 inline-block text-xs px-2 py-0.5 bg-primary text-white rounded">Selected</div>
+                      <div className="mt-2 inline-block text-xs px-2 py-0.5 bg-primary text-white rounded">
+                        Selected
+                      </div>
                     )}
                   </button>
                 ))}
@@ -463,6 +583,17 @@ export default function CheckoutPage() {
               <Button
                 size="lg"
                 onClick={() => {
+                  // Validate guest info if user is not logged in
+                  if (!user && !guestInfo) {
+                    toast({
+                      variant: "destructive",
+                      title: "Thông tin thiếu / Missing Information",
+                      description:
+                        "Vui lòng điền thông tin khách hàng. / Please provide your contact information.",
+                    });
+                    return;
+                  }
+
                   // Validate delivery step before proceeding
                   if (deliveryOption === "delivery") {
                     if (
@@ -501,7 +632,9 @@ export default function CheckoutPage() {
                 ) : (
                   <CreditCard className="mr-2 h-5 w-5" />
                 )}
-                {isLoading ? "Processing..." : `Thanh toán ${finalTotal.toLocaleString()}₫`}
+                {isLoading
+                  ? "Processing..."
+                  : `Thanh toán ${finalTotal.toLocaleString()}₫`}
               </Button>
             )}
 
@@ -575,6 +708,7 @@ const PaymentStep = ({
   deliveryFee,
   deliveryOption,
   isStaff,
+  isAuthenticated,
 }: {
   paymentMethod: PaymentMethod;
   setPaymentMethod: (method: PaymentMethod) => void;
@@ -584,9 +718,10 @@ const PaymentStep = ({
   deliveryFee: number;
   deliveryOption: "pickup" | "delivery";
   isStaff?: boolean;
+  isAuthenticated: boolean;
 }) => {
   const pointsCost = Math.round(orderTotal / 100); // 1 point per 100 VND
-  const canPayWithPoints = userPoints >= pointsCost;
+  const canPayWithPoints = isAuthenticated && userPoints >= pointsCost;
 
   return (
     <div>
@@ -609,7 +744,9 @@ const PaymentStep = ({
                 : "Pickup / Nhận tại quầy:"}
             </span>
             <span>
-              {deliveryFee > 0 ? `${deliveryFee.toLocaleString()}₫` : "Miễn phí"}
+              {deliveryFee > 0
+                ? `${deliveryFee.toLocaleString()}₫`
+                : "Miễn phí"}
             </span>
           </div>
           <Separator className="my-2" />
@@ -670,8 +807,20 @@ const PaymentStep = ({
           <div className="flex-1">
             <p className="font-semibold text-lg">Pay with Points</p>
             <p className="text-sm text-muted-foreground">
-              {pointsCost.toLocaleString()} points needed. You have{" "}
-              {userPoints.toLocaleString()}.
+              {isAuthenticated ? (
+                <>
+                  {pointsCost.toLocaleString()} points needed. You have{" "}
+                  {userPoints.toLocaleString()}.
+                </>
+              ) : (
+                <>
+                  Thanh toán bằng điểm yêu cầu tài khoản / Requires account to
+                  use points.{" "}
+                  <a href="/login" className="underline font-semibold">
+                    Sign in
+                  </a>
+                </>
+              )}
             </p>
           </div>
         </Label>

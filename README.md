@@ -33,7 +33,7 @@ A modern, feature-rich coffee shop web app built with Next.js, TypeScript, Tailw
 - **Order Repeat/Quick Reorder:** One-click reorder functionality with cart integration
 - **Store Hours & Holiday Notices:** ✅ Dynamic, integrated with embassy locations
 - **Interactive Embassy Maps:** ✅ OpenStreetMap integration with Vietnamese locations
-- **Guest Checkout (Planned):** Order without sign-in (limited features)
+- **Guest Checkout:** ✅ Order without account (name + phone only, limited to cash/QR payment)
 
 ---
 
@@ -132,7 +132,9 @@ A modern, feature-rich coffee shop web app built with Next.js, TypeScript, Tailw
 - [x] Order Repeat/Quick Reorder
 - [x] Store Hours & Holiday Notices
 - [x] Interactive Embassy Maps with OpenStreetMap Integration
-- [ ] Guest Checkout
+- [x] Guest Checkout (Cash/QR payment only)
+- [ ] Post-Order Account Creation Prompt
+- [ ] SMS/Email Order Notifications for Guests
 
 ---
 

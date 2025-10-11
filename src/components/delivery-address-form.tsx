@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MapPin, Truck, Store, Clock, Loader2 } from "lucide-react";
 import type { DeliveryAddress } from "@/lib/types";
+import { isValidPhoneNumber } from "@/lib/utils";
 import {
   getProvinces,
   getDistricts,
@@ -50,10 +51,14 @@ export function DeliveryAddressForm({
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [availableDistricts, setAvailableDistricts] = useState<District[]>([]);
   const [availableWards, setAvailableWards] = useState<Ward[]>([]);
-  const [selectedProvinceCode, setSelectedProvinceCode] = useState<number | null>(null);
-  const [selectedDistrictCode, setSelectedDistrictCode] = useState<number | null>(null);
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState<
+    number | null
+  >(null);
+  const [selectedDistrictCode, setSelectedDistrictCode] = useState<
+    number | null
+  >(null);
   const [selectedWardCode, setSelectedWardCode] = useState<number | null>(null);
-  
+
   // Loading states
   const [loadingProvinces, setLoadingProvinces] = useState(true);
   const [loadingDistricts, setLoadingDistricts] = useState(false);
@@ -66,7 +71,7 @@ export function DeliveryAddressForm({
         const data = await getProvinces();
         setProvinces(data);
       } catch (error) {
-        console.error('Failed to load provinces:', error);
+        console.error("Failed to load provinces:", error);
       } finally {
         setLoadingProvinces(false);
       }
@@ -87,7 +92,7 @@ export function DeliveryAddressForm({
           setSelectedDistrictCode(null); // Reset district selection
           setSelectedWardCode(null); // Reset ward selection
         } catch (error) {
-          console.error('Failed to load districts:', error);
+          console.error("Failed to load districts:", error);
           setAvailableDistricts([]);
         } finally {
           setLoadingDistricts(false);
@@ -109,11 +114,14 @@ export function DeliveryAddressForm({
       if (selectedProvinceCode && selectedDistrictCode) {
         setLoadingWards(true);
         try {
-          const wards = await getWards(selectedProvinceCode, selectedDistrictCode);
+          const wards = await getWards(
+            selectedProvinceCode,
+            selectedDistrictCode
+          );
           setAvailableWards(wards);
           setSelectedWardCode(null); // Reset ward selection
         } catch (error) {
-          console.error('Failed to load wards:', error);
+          console.error("Failed to load wards:", error);
           setAvailableWards([]);
         } finally {
           setLoadingWards(false);
@@ -130,13 +138,24 @@ export function DeliveryAddressForm({
   // Calculate delivery fee when province/district changes
   useEffect(() => {
     if (selectedProvinceCode && deliveryOption === "delivery") {
-      const newFee = getDeliveryFee(selectedProvinceCode, selectedDistrictCode || undefined);
+      const newFee = getDeliveryFee(
+        selectedProvinceCode,
+        selectedDistrictCode || undefined
+      );
       onDeliveryFeeChange(newFee);
     }
-  }, [selectedProvinceCode, selectedDistrictCode, deliveryOption, onDeliveryFeeChange]);
+  }, [
+    selectedProvinceCode,
+    selectedDistrictCode,
+    deliveryOption,
+    onDeliveryFeeChange,
+  ]);
 
   // Handle address field changes
-  const handleAddressChange = async (field: keyof DeliveryAddress, value: string) => {
+  const handleAddressChange = async (
+    field: keyof DeliveryAddress,
+    value: string
+  ) => {
     // Initialize empty address if null
     const currentAddress = deliveryAddress || {
       recipientName: "",
@@ -145,14 +164,16 @@ export function DeliveryAddressForm({
       ward: "",
       district: "",
       city: "",
-      specialInstructions: ""
+      specialInstructions: "",
     };
 
     let updatedAddress = { ...currentAddress, [field]: value };
 
     // Handle province selection
     if (field === "city") {
-      const selectedProvince = provinces.find((province) => province.name === value);
+      const selectedProvince = provinces.find(
+        (province) => province.name === value
+      );
       if (selectedProvince) {
         setSelectedProvinceCode(selectedProvince.code);
         // Clear dependent fields
@@ -165,7 +186,9 @@ export function DeliveryAddressForm({
 
     // Handle district selection
     if (field === "district") {
-      const selectedDistrict = availableDistricts.find((district) => district.name === value);
+      const selectedDistrict = availableDistricts.find(
+        (district) => district.name === value
+      );
       if (selectedDistrict) {
         setSelectedDistrictCode(selectedDistrict.code);
         // Clear ward
@@ -196,8 +219,9 @@ export function DeliveryAddressForm({
 
       if (!deliveryAddress?.phoneNumber?.trim()) {
         newErrors.phoneNumber = "Số điện thoại là bắt buộc";
-      } else if (!/^[0-9]{10,11}$/.test(deliveryAddress.phoneNumber.replace(/\s/g, ""))) {
-        newErrors.phoneNumber = "Số điện thoại không hợp lệ";
+      } else if (!isValidPhoneNumber(deliveryAddress.phoneNumber)) {
+        newErrors.phoneNumber =
+          "Số điện thoại không hợp lệ. Hỗ trợ số quốc tế (ví dụ: +441234567890)";
       }
 
       if (!deliveryAddress?.streetAddress?.trim()) {
@@ -238,16 +262,21 @@ export function DeliveryAddressForm({
             <Truck className="h-5 w-5 text-primary" />
             <h3 className="text-lg font-semibold">Phương thức nhận hàng</h3>
           </div>
-          
+
           <RadioGroup
             value={deliveryOption}
-            onValueChange={(value) => onDeliveryOptionChange(value as "pickup" | "delivery")}
+            onValueChange={(value) =>
+              onDeliveryOptionChange(value as "pickup" | "delivery")
+            }
             className="space-y-4"
           >
             <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
               <RadioGroupItem value="pickup" id="pickup" />
               <div className="flex-1">
-                <Label htmlFor="pickup" className="flex items-center space-x-2 cursor-pointer">
+                <Label
+                  htmlFor="pickup"
+                  className="flex items-center space-x-2 cursor-pointer"
+                >
                   <Store className="h-4 w-4" />
                   <span className="font-medium">Nhận tại cửa hàng</span>
                 </Label>
@@ -256,11 +285,14 @@ export function DeliveryAddressForm({
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
               <RadioGroupItem value="delivery" id="delivery" />
               <div className="flex-1">
-                <Label htmlFor="delivery" className="flex items-center space-x-2 cursor-pointer">
+                <Label
+                  htmlFor="delivery"
+                  className="flex items-center space-x-2 cursor-pointer"
+                >
                   <Truck className="h-4 w-4" />
                   <span className="font-medium">Giao hàng tận nơi</span>
                 </Label>
@@ -281,13 +313,15 @@ export function DeliveryAddressForm({
               <Store className="h-5 w-5 text-primary" />
               <h3 className="text-lg font-semibold">Thông tin cửa hàng</h3>
             </div>
-            
+
             <div className="space-y-4">
               <div className="p-4 bg-muted/50 rounded-lg">
                 <div className="flex items-start space-x-3">
                   <MapPin className="h-5 w-5 text-primary mt-0.5" />
                   <div>
-                    <h4 className="font-medium">AMBASSADOR's COFFEE - Embassy District</h4>
+                    <h4 className="font-medium">
+                      AMBASSADOR's COFFEE - Embassy District
+                    </h4>
                     <p className="text-sm text-muted-foreground mt-1">
                       45 Hai Bà Trưng, Quận 1, Thành phố Hồ Chí Minh, Vietnam
                     </p>
@@ -303,7 +337,9 @@ export function DeliveryAddressForm({
                     <div className="text-sm text-muted-foreground mt-1 space-y-1">
                       <p>Thứ 2 - Thứ 6: 7:00 - 22:00</p>
                       <p>Thứ 7 - Chủ nhật: 8:00 - 21:00</p>
-                      <p>Diplomatic Hours: Phục vụ với tiêu chuẩn đại sứ quán</p>
+                      <p>
+                        Diplomatic Hours: Phục vụ với tiêu chuẩn đại sứ quán
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -311,8 +347,9 @@ export function DeliveryAddressForm({
 
               <div className="p-4 border-l-4 border-primary bg-primary/5">
                 <p className="text-sm">
-                  <strong>Diplomatic Note:</strong> Vui lòng mang theo mã đơn hàng khi đến Embassy District. 
-                  Đơn hàng sẽ được giữ trong vòng 48 giờ kể từ khi đặt.
+                  <strong>Diplomatic Note:</strong> Vui lòng mang theo mã đơn
+                  hàng khi đến Embassy District. Đơn hàng sẽ được giữ trong vòng
+                  48 giờ kể từ khi đặt.
                 </p>
               </div>
             </div>
@@ -338,12 +375,16 @@ export function DeliveryAddressForm({
                 <Input
                   id="recipientName"
                   value={deliveryAddress?.recipientName || ""}
-                  onChange={(e) => handleAddressChange("recipientName", e.target.value)}
+                  onChange={(e) =>
+                    handleAddressChange("recipientName", e.target.value)
+                  }
                   placeholder="Nhập họ và tên"
                   className={errors.recipientName ? "border-destructive" : ""}
                 />
                 {errors.recipientName && (
-                  <p className="text-sm text-destructive">{errors.recipientName}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.recipientName}
+                  </p>
                 )}
               </div>
 
@@ -356,12 +397,16 @@ export function DeliveryAddressForm({
                   id="phoneNumber"
                   type="tel"
                   value={deliveryAddress?.phoneNumber || ""}
-                  onChange={(e) => handleAddressChange("phoneNumber", e.target.value)}
+                  onChange={(e) =>
+                    handleAddressChange("phoneNumber", e.target.value)
+                  }
                   placeholder="Nhập số điện thoại"
                   className={errors.phoneNumber ? "border-destructive" : ""}
                 />
                 {errors.phoneNumber && (
-                  <p className="text-sm text-destructive">{errors.phoneNumber}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.phoneNumber}
+                  </p>
                 )}
               </div>
 
@@ -373,12 +418,16 @@ export function DeliveryAddressForm({
                 <Input
                   id="streetAddress"
                   value={deliveryAddress?.streetAddress || ""}
-                  onChange={(e) => handleAddressChange("streetAddress", e.target.value)}
+                  onChange={(e) =>
+                    handleAddressChange("streetAddress", e.target.value)
+                  }
                   placeholder="Nhập số nhà, tên đường"
                   className={errors.streetAddress ? "border-destructive" : ""}
                 />
                 {errors.streetAddress && (
-                  <p className="text-sm text-destructive">{errors.streetAddress}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.streetAddress}
+                  </p>
                 )}
               </div>
 
@@ -392,12 +441,14 @@ export function DeliveryAddressForm({
                   onValueChange={(value) => handleAddressChange("city", value)}
                   disabled={loadingProvinces}
                 >
-                  <SelectTrigger className={errors.city ? "border-destructive" : ""}>
-                    <SelectValue placeholder={
-                      loadingProvinces 
-                        ? "Đang tải..." 
-                        : "Chọn tỉnh thành"
-                    } />
+                  <SelectTrigger
+                    className={errors.city ? "border-destructive" : ""}
+                  >
+                    <SelectValue
+                      placeholder={
+                        loadingProvinces ? "Đang tải..." : "Chọn tỉnh thành"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {loadingProvinces ? (
@@ -426,17 +477,23 @@ export function DeliveryAddressForm({
                 </Label>
                 <Select
                   value={deliveryAddress?.district || ""}
-                  onValueChange={(value) => handleAddressChange("district", value)}
+                  onValueChange={(value) =>
+                    handleAddressChange("district", value)
+                  }
                   disabled={!selectedProvinceCode || loadingDistricts}
                 >
-                  <SelectTrigger className={errors.district ? "border-destructive" : ""}>
-                    <SelectValue placeholder={
-                      !selectedProvinceCode 
-                        ? "Chọn tỉnh thành trước"
-                        : loadingDistricts
-                        ? "Đang tải..."
-                        : "Chọn quận huyện"
-                    } />
+                  <SelectTrigger
+                    className={errors.district ? "border-destructive" : ""}
+                  >
+                    <SelectValue
+                      placeholder={
+                        !selectedProvinceCode
+                          ? "Chọn tỉnh thành trước"
+                          : loadingDistricts
+                          ? "Đang tải..."
+                          : "Chọn quận huyện"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {loadingDistricts ? (
@@ -468,14 +525,18 @@ export function DeliveryAddressForm({
                   onValueChange={(value) => handleAddressChange("ward", value)}
                   disabled={!selectedDistrictCode || loadingWards}
                 >
-                  <SelectTrigger className={errors.ward ? "border-destructive" : ""}>
-                    <SelectValue placeholder={
-                      !selectedDistrictCode
-                        ? "Chọn quận huyện trước"
-                        : loadingWards
-                        ? "Đang tải..."
-                        : "Chọn phường xã"
-                    } />
+                  <SelectTrigger
+                    className={errors.ward ? "border-destructive" : ""}
+                  >
+                    <SelectValue
+                      placeholder={
+                        !selectedDistrictCode
+                          ? "Chọn quận huyện trước"
+                          : loadingWards
+                          ? "Đang tải..."
+                          : "Chọn phường xã"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {loadingWards ? (
@@ -503,7 +564,9 @@ export function DeliveryAddressForm({
                 <Textarea
                   id="specialInstructions"
                   value={deliveryAddress?.specialInstructions || ""}
-                  onChange={(e) => handleAddressChange("specialInstructions", e.target.value)}
+                  onChange={(e) =>
+                    handleAddressChange("specialInstructions", e.target.value)
+                  }
                   placeholder="Ghi chú thêm cho người giao hàng..."
                   rows={3}
                 />
@@ -517,14 +580,17 @@ export function DeliveryAddressForm({
               <div>
                 <h4 className="font-medium">Phí giao hàng</h4>
                 <p className="text-sm text-muted-foreground">
-                  {selectedProvinceCode 
-                    ? provinces.find(p => p.code === selectedProvinceCode)?.name || "Đã chọn tỉnh thành"
-                    : "Chưa chọn địa chỉ"
-                  }
-                  {selectedDistrictCode && availableDistricts.length > 0 
-                    ? ` - ${availableDistricts.find(d => d.code === selectedDistrictCode)?.name}`
-                    : ""
-                  }
+                  {selectedProvinceCode
+                    ? provinces.find((p) => p.code === selectedProvinceCode)
+                        ?.name || "Đã chọn tỉnh thành"
+                    : "Chưa chọn địa chỉ"}
+                  {selectedDistrictCode && availableDistricts.length > 0
+                    ? ` - ${
+                        availableDistricts.find(
+                          (d) => d.code === selectedDistrictCode
+                        )?.name
+                      }`
+                    : ""}
                 </p>
               </div>
               <div className="text-right">
