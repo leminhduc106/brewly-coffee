@@ -1,16 +1,26 @@
 "use client";
 
-import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
-import type { Product, CartItem } from '@/lib/types';
-import { db } from '@/lib/firebase';
-import { useAuth } from './auth-context';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import React, {
+  createContext,
+  useState,
+  useContext,
+  ReactNode,
+  useEffect,
+  useRef,
+} from "react";
+import type { Product, CartItem } from "@/lib/types";
+import { db } from "@/lib/firebase";
+import { useAuth } from "./auth-context";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 interface CartContextType {
   cart: CartItem[];
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  addItem: (product: Product, options: { size: string; milk: string; toppings?: string[] }) => void;
+  addItem: (
+    product: Product,
+    options: { size: string; milk: string; toppings?: string[] }
+  ) => void;
   removeItem: (cartId: string) => void;
   updateQuantity: (cartId: string, quantity: number) => void;
   clearCart: () => void;
@@ -24,7 +34,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
-    throw new Error('useCart must be used within a CartProvider');
+    throw new Error("useCart must be used within a CartProvider");
   }
   return context;
 };
@@ -32,8 +42,8 @@ export const useCart = () => {
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [cart, setCart] = useState<CartItem[]>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('brewly-cart');
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("brewly-cart");
       if (stored) {
         try {
           return JSON.parse(stored);
@@ -51,17 +61,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const loadUserCart = async () => {
       if (user) {
-        const cartRef = doc(db, 'carts', user.uid);
+        const cartRef = doc(db, "carts", user.uid);
         const snap = await getDoc(cartRef);
         let userCart: CartItem[] = [];
         if (snap.exists()) {
           userCart = snap.data().cart || [];
         }
         // Merge local cart with Firestore cart on first login
-        const localCart = JSON.parse(localStorage.getItem('brewly-cart') || '[]');
+        const localCart = JSON.parse(
+          localStorage.getItem("brewly-cart") || "[]"
+        );
         const mergedCart = mergeCarts(userCart, localCart);
         setCart(mergedCart);
-        localStorage.removeItem('brewly-cart');
+        localStorage.removeItem("brewly-cart");
       }
     };
     if (user && isInitialLoad.current) {
@@ -76,27 +88,41 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   // Save cart to Firestore for logged-in users, else localStorage
   useEffect(() => {
     if (user) {
-      const cartRef = doc(db, 'carts', user.uid);
+      const cartRef = doc(db, "carts", user.uid);
       setDoc(cartRef, { cart }, { merge: true });
     } else {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('brewly-cart', JSON.stringify(cart));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("brewly-cart", JSON.stringify(cart));
       }
     }
   }, [cart, user]);
 
   // Merge two carts (by product, size, milk)
+  // Note: include toppings in identity and normalize order to avoid duplicates-by-ordering
+  function normalizeToppings(t: string[] | undefined) {
+    return (t || []).slice().sort();
+  }
+
+  function toppingsEqual(a?: string[], b?: string[]) {
+    const aa = normalizeToppings(a);
+    const bb = normalizeToppings(b);
+    if (aa.length !== bb.length) return false;
+    return aa.every((v, i) => v === bb[i]);
+  }
+
   function mergeCarts(cartA: CartItem[], cartB: CartItem[]): CartItem[] {
     const merged: CartItem[] = [...cartA];
-    cartB.forEach(itemB => {
-      const match = merged.find(itemA =>
-        itemA.id === itemB.id &&
-        itemA.selectedSize === itemB.selectedSize &&
-        itemA.selectedMilk === itemB.selectedMilk
+    cartB.forEach((itemB) => {
+      const match = merged.find(
+        (itemA) =>
+          itemA.id === itemB.id &&
+          itemA.selectedSize === itemB.selectedSize &&
+          itemA.selectedMilk === itemB.selectedMilk &&
+          toppingsEqual(itemA.selectedToppings, itemB.selectedToppings)
       );
       if (match) {
-        // Instead of summing, take the max quantity
-        match.quantity = Math.max(match.quantity, itemB.quantity);
+        // Sum quantities when merging matching items
+        match.quantity = (match.quantity || 0) + (itemB.quantity || 0);
       } else {
         merged.push(itemB);
       }
@@ -104,20 +130,26 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return merged;
   }
 
-  const addItem = (product: Product, options: { size: string; milk: string; toppings?: string[] }) => {
-    setCart(prevCart => {
+  const addItem = (
+    product: Product,
+    options: { size: string; milk: string; toppings?: string[] }
+  ) => {
+    setCart((prevCart) => {
       // Check if an identical item is already in the cart (including toppings)
-      const existingItem = prevCart.find(item => 
-        item.id === product.id && 
-        item.selectedSize === options.size && 
-        item.selectedMilk === options.milk &&
-        JSON.stringify(item.selectedToppings || []) === JSON.stringify(options.toppings || [])
+      const existingItem = prevCart.find(
+        (item) =>
+          item.id === product.id &&
+          item.selectedSize === options.size &&
+          item.selectedMilk === options.milk &&
+          toppingsEqual(item.selectedToppings || [], options.toppings || [])
       );
 
       if (existingItem) {
         // If it exists, just increase quantity
-        return prevCart.map(item =>
-          item.cartId === existingItem.cartId ? { ...item, quantity: item.quantity + 1 } : item
+        return prevCart.map((item) =>
+          item.cartId === existingItem.cartId
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
         );
       } else {
         // If not, add as a new item
@@ -136,34 +168,39 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const removeItem = (cartId: string) => {
-    setCart(prevCart => prevCart.filter(item => item.cartId !== cartId));
+    setCart((prevCart) => prevCart.filter((item) => item.cartId !== cartId));
   };
 
   const updateQuantity = (cartId: string, quantity: number) => {
     if (quantity <= 0) {
       removeItem(cartId);
     } else {
-      setCart(prevCart =>
-        prevCart.map(item =>
+      setCart((prevCart) =>
+        prevCart.map((item) =>
           item.cartId === cartId ? { ...item, quantity } : item
         )
       );
     }
   };
-  
+
   const clearCart = () => {
     setCart([]);
   };
 
-  const cartTotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  const cartTotal = cart.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
   const cartCount = cart.reduce((count, item) => count + item.quantity, 0);
 
   // Repeat order: replace cart with given items
   const repeatOrder = (items: CartItem[]) => {
     // Remove cartId to avoid duplicates, regenerate new ones
-    const newItems = items.map(item => ({
+    const newItems = items.map((item) => ({
       ...item,
-      cartId: `${item.id}-${item.selectedSize}-${item.selectedMilk}-${Date.now()}-${Math.random()}`
+      cartId: `${item.id}-${item.selectedSize}-${
+        item.selectedMilk
+      }-${Date.now()}-${Math.random()}`,
     }));
     setCart(newItems);
     setIsOpen(true);
@@ -171,7 +208,18 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <CartContext.Provider
-      value={{ cart, isOpen, setIsOpen, addItem, removeItem, updateQuantity, clearCart, cartTotal, cartCount, repeatOrder }}
+      value={{
+        cart,
+        isOpen,
+        setIsOpen,
+        addItem,
+        removeItem,
+        updateQuantity,
+        clearCart,
+        cartTotal,
+        cartCount,
+        repeatOrder,
+      }}
     >
       {children}
     </CartContext.Provider>
